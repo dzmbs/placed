@@ -12,7 +12,7 @@ Migration can be triggered directly on the official strategy, outside our coordi
 
 Most valuable improvement: a versioned end-to-end Sepolia example covering Permit2, partial-exit hints, claims, fee-controller configuration, migration recovery and the exact router action encoding. Include both successful and failed fundraising paths.
 
-Public sale/trade evidence is not recorded yet. The shared contracts and ENS parent are deployed; successful user verification and the public demo run remain to be completed. The feedback form submission is pending.
+Public sale/trade evidence is not recorded yet. The shared contracts and ENS parent are deployed, and the first asset and slot are published. The remaining public demo run and feedback form submission are pending.
 
 ## World IDKit
 
@@ -20,7 +20,7 @@ The trust moment is creator publishing and the first funded advertising bid. Pro
 
 Implemented: IDKit 4.3.0 v4 requests, wallet-bound server-signed RP context, official server verification, private uniqueness mapping, onchain authorization and rejected/cancelled paths. Local HTTP checks confirmed request signing and rejection. Automated policy checks reject substituted wallets, actions, nonces, environments and credentials. Simulator testing exposed two integration errors: disabling Proof of Human's documented Orb fallback and treating `expires_at_min` as the credential expiry. Both are corrected, with v3 Orb and v4 human payloads forwarded unchanged to the official verifier. Device and document proofs remain rejected.
 
-Time to first successful human proof is not measured yet. Do not count an RP signature or a mocked cryptographic response as a success. Finish this debrief after a person completes the widget in the configured environment.
+The user completed simulator verification and published an asset and slot on Sepolia on 27 September 2026. This is a test credential flow, not production Proof of Human. Time to first success was not measured. The current production verification endpoint requires a 24-hour staging window and a server-only staging token; older integration guidance omitted that requirement. Setup tooling now opens the window through the official Portal MCP and privately stores the token.
 
 Most valuable improvement: make the differences between v3 action proofs, v4 RP requests, staging credentials and production Proof of Human especially clear in a single migration example.
 
@@ -30,4 +30,4 @@ Asset and slot discovery follows ENSv2's hierarchical registries. Dedicated slot
 
 Fork tests confirm that a winner can update only its slot artwork, other wallets and keys are rejected, and campaign completion revokes that permission. The testnet parent registration is live.
 
-Most valuable improvement: prominently pair deployment artifacts with the matching source revision. Current resolver setters use DNS-encoded names while reads use namehashes; older examples can imply a different API.
+Most valuable improvement: prominently pair deployment artifacts with the matching source revision. Current resolver setters use DNS-encoded names. Reads must go through `resolve` with the DNS-encoded name and an encoded profile query, rather than directly calling the old `text(bytes32,string)` getter. A Sepolia regression test covers metadata and artwork reads alongside scoped writes and revocation.

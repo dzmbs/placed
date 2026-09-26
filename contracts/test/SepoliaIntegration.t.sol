@@ -108,8 +108,33 @@ contract SepoliaIntegrationTest is Test {
         house.finalize(campaign);
         IPermissionedResolver resolver = naming.slotResolvers(slot);
         bytes memory name = naming.slotNames(slot);
+        assertEq(
+            abi.decode(
+                resolver.resolve(name, abi.encodeWithSignature("text(bytes32,string)", bytes32(0), "ad.metadata")),
+                (string)
+            ),
+            "ipfs://slot"
+        );
+        assertEq(
+            abi.decode(
+                naming.assetResolvers(asset)
+                    .resolve(
+                        naming.assetNames(asset),
+                        abi.encodeWithSignature("text(bytes32,string)", bytes32(0), "ad.metadata")
+                    ),
+                (string)
+            ),
+            "ipfs://asset"
+        );
         vm.prank(investor);
         resolver.setText(name, "ad.artwork", "ipfs://updated-logo");
+        assertEq(
+            abi.decode(
+                resolver.resolve(name, abi.encodeWithSignature("text(bytes32,string)", bytes32(0), "ad.artwork")),
+                (string)
+            ),
+            "ipfs://updated-logo"
+        );
         vm.prank(investor);
         vm.expectRevert();
         resolver.setText(name, "ad.revenueToken", "attacker");

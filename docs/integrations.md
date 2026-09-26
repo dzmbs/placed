@@ -47,6 +47,8 @@ Successful human verification requires a person to complete the widget. A signed
 
 Each asset has a child registry and metadata resolver; every slot gets its own Permissioned Resolver. The backend follows the ENSv2 ETH registry into this hierarchy, reads model/placement metadata and public artwork, and cross-checks the ENS revenue-token reference against the asset's registered financing series. The winner gets only the `ad.artwork` setter role on that slot's resolver. Completion or refund revokes that role.
 
+Read text records through `resolve(DNS-encoded name, encoded text query)` and decode the returned string. Permissioned Resolver does not expose the older direct `text(bytes32,string)` getter. This applies to metadata, public artwork and revenue-token references.
+
 ## Deploy your own instance
 
 The checked-in manifest describes the shared Sepolia deployment. To create your own instance, configure fresh backend signer keys and an available `ENS_PARENT_NAME`, install Foundry, then run:

@@ -1,5 +1,5 @@
 import 'server-only';
-import { namehash, parseAbi, zeroAddress, type Address } from 'viem';
+import { parseAbi, zeroAddress, type Address } from 'viem';
 import { auctionHouseAbi } from '../abi/AuctionHouse';
 import { assetRevenueVaultAbi } from '../abi/AssetRevenueVault';
 import { assetLaunchCoordinatorAbi } from '../abi/AssetLaunchCoordinator';
@@ -16,9 +16,9 @@ import type {
 import { publicClient, requireDeployment } from './chain';
 import { localMetadata, validateMetadata } from './media';
 import { RequestError } from './http';
+import { readEnsText } from '../ens';
 
 const states: CampaignState[] = ['bidding', 'displaying', 'completed', 'no-sale', 'refunded'];
-const resolverAbi = parseAbi(['function text(bytes32 node,string key) view returns(string)']);
 const registryAbi = parseAbi([
   'function getSubregistry(string) view returns(address)',
   'function getResolver(string) view returns(address)',
@@ -123,20 +123,12 @@ export async function readSlot(id: bigint): Promise<AdSlot> {
     }),
     slot.currentCampaignId ? readCampaign(slot.currentCampaignId) : undefined,
   ]);
-  const record = await publicClient.readContract({
-    address: resolver,
-    abi: resolverAbi,
-    functionName: 'text',
-    args: [namehash(ensName), 'ad.metadata'],
-  });
+  const [record, publicArtwork] = await Promise.all([
+    readEnsText(publicClient, resolver, ensName, 'ad.metadata'),
+    readEnsText(publicClient, resolver, ensName, 'ad.artwork'),
+  ]);
   const slotMetadata =
     record === slot.metadataURI ? await metadata<SlotMetadata>(record, 'slot') : undefined;
-  const publicArtwork = await publicClient.readContract({
-    address: resolver,
-    abi: resolverAbi,
-    functionName: 'text',
-    args: [namehash(ensName), 'ad.artwork'],
-  });
   return {
     id: String(id),
     assetId: String(slot.assetId),
@@ -190,12 +182,7 @@ export async function readAsset(id: bigint): Promise<Asset> {
   });
   const [record, tokenRecord] = await Promise.all(
     ['ad.metadata', 'ad.revenueToken'].map((key) =>
-      publicClient.readContract({
-        address: resolver,
-        abi: resolverAbi,
-        functionName: 'text',
-        args: [namehash(ensName), key],
-      }),
+      readEnsText(publicClient, resolver, ensName, key),
     ),
   );
   const [assetMetadata, slots] = await Promise.all([

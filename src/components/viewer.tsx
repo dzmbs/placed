@@ -8,6 +8,7 @@ import {
   OrbitControls,
   RoundedBox,
   useTexture,
+  useProgress,
 } from '@react-three/drei';
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 import { DecalGeometry } from 'three/addons/geometries/DecalGeometry.js';
@@ -132,6 +133,7 @@ function SpotPatch({
   onSelect,
   assetRoot,
   surfaceRevision,
+  placing,
 }: {
   spot: Spot;
   index: number;
@@ -140,6 +142,7 @@ function SpotPatch({
   onSelect: (id: string) => void;
   assetRoot: React.RefObject<THREE.Group | null>;
   surfaceRevision: number;
+  placing: boolean;
 }) {
   const [hover, setHover] = useState(false);
   const texture = useMemo(
@@ -194,6 +197,7 @@ function SpotPatch({
     />
   );
   const events = {
+    ...(placing ? { raycast: () => {} } : {}),
     onClick: (e: ThreeEvent<MouseEvent>) => {
       e.stopPropagation();
       if (e.delta < 5) onSelect(spot.id);
@@ -232,9 +236,12 @@ function SpotPatch({
     </group>
   );
 }
-function Scene(props: ViewerProps) {
+function Scene(props: ViewerProps & { onLoaded: () => void }) {
   const [surfaceRevision, setSurfaceRevision] = useState(0);
-  const modelReady = useCallback(() => setSurfaceRevision((revision) => revision + 1), []);
+  const modelReady = useCallback(() => {
+    setSurfaceRevision((revision) => revision + 1);
+    props.onLoaded();
+  }, [props.onLoaded]);
   const root = useRef<THREE.Group>(null);
   const modelRoot = useRef<THREE.Group>(null);
   const controls = useRef<OrbitControlsImpl>(null);
@@ -376,6 +383,7 @@ function Scene(props: ViewerProps) {
         <meshStandardMaterial color="#101914" roughness={0.85} />
       </mesh>
       <ContactShadows
+        key={surfaceRevision}
         position={[0, -0.025, 0]}
         opacity={0.45}
         scale={7}
@@ -404,7 +412,8 @@ function Scene(props: ViewerProps) {
               index={index}
               selected={!props.preview && props.selectedId === spot.id}
               preview={props.preview}
-              onSelect={props.placing ? () => {} : props.onSelect}
+              onSelect={props.onSelect}
+              placing={props.placing}
               assetRoot={root}
               surfaceRevision={surfaceRevision}
             />
@@ -429,30 +438,43 @@ function Scene(props: ViewerProps) {
   );
 }
 export default function Viewer(props: ViewerProps) {
-  const [loaded, setLoaded] = useState(false);
+  const modelKey = `${props.draft.asset}:${props.draft.assetUrl ?? ''}:${props.draft.humanPreset ?? ''}`;
+  const [loadedKey, setLoadedKey] = useState('');
+  const [failedKey, setFailedKey] = useState('');
+  const { active, progress } = useProgress();
+  const onLoaded = useCallback(() => {
+    requestAnimationFrame(() => requestAnimationFrame(() => setLoadedKey(modelKey)));
+  }, [modelKey]);
   const bodyKey = props.draft.humanPreset
     ? (humanWardrobe(props.draft.humanPreset)?.bodyUrl ?? props.draft.humanPreset)
     : '';
   return (
     <div className="canvas-wrap">
-      {!loaded && (
-        <div className="viewer-loading">
+      {failedKey !== modelKey && (loadedKey !== modelKey || active) && (
+        <div className="viewer-loading viewer-loading-cover" role="status" aria-live="polite">
           <span className="spinner" />
-          Setting the stage…
+          <strong>Preparing your 3D preview</strong>
+          <small>
+            {active && progress > 0
+              ? `Loading model and textures · ${Math.round(progress)}%`
+              : 'Finishing the scene…'}
+          </small>
         </div>
       )}
       <SceneBoundary
         key={`${props.draft.asset}-${props.draft.assetUrl}-${bodyKey}`}
-        onError={props.onError}
+        onError={(message) => {
+          setFailedKey(modelKey);
+          props.onError(message);
+        }}
       >
         <Canvas
           shadows
           dpr={[1, 1.75]}
           camera={{ position: [3.6, 2.9, 6], fov: 36 }}
           gl={{ antialias: true, alpha: false, powerPreference: 'high-performance' }}
-          onCreated={() => setLoaded(true)}
         >
-          <Scene {...props} />
+          <Scene {...props} onLoaded={onLoaded} />
         </Canvas>
       </SceneBoundary>
     </div>

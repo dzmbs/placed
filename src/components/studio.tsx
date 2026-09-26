@@ -1,8 +1,8 @@
 'use client';
 import dynamic from 'next/dynamic';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { PENDING_KEY } from '@/lib/market';
+import { MarketNav } from './market-ui';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ArrowDownToLine,
@@ -39,7 +39,7 @@ import {
   Upload,
   X,
 } from 'lucide-react';
-import { ASSETS, COLORS, initialDraft, money, safeDraft, validateDraft } from '@/lib/studio';
+import { ASSETS, COLORS, initialDraft, money, safeDraft } from '@/lib/studio';
 import type { AssetKind, Draft, GenerationProvider, SavedModel, Spot, Vec3 } from '@/lib/types';
 import {
   rememberCanvas,
@@ -632,7 +632,14 @@ export default function Studio() {
   const selectedIndex = draft.spots.findIndex((s) => s.id === selectedId);
   const asset = ASSETS.find((a) => a.id === draft.asset);
   const total = draft.spots.reduce((n, s) => n + s.price, 0);
-  const campaignErrors = validateDraft(draft);
+  const campaignErrors = [
+    ...(!draft.spots.length ? ['Add at least one slot.'] : []),
+    ...(!draft.campaign.title.trim() ? ['Give your asset a title.'] : []),
+    ...(!draft.campaign.deliverables.trim() ? ['Describe your asset.'] : []),
+    ...(draft.spots.some((spot) => !spot.name.trim() || spot.width <= 0 || spot.height <= 0)
+      ? ['Each slot needs a name and positive dimensions.']
+      : []),
+  ];
   const saveCanvas = useCallback(
     (value: Draft) => {
       canvases.current = rememberCanvas(canvases.current, value);
@@ -851,69 +858,35 @@ export default function Studio() {
   }
   return (
     <main className={`app studio-app ${expanded ? 'studio-fullscreen' : ''}`}>
-      <nav className="topbar" aria-label="Main navigation">
-        <a className="wordmark" href="/" aria-label="Placed home">
-          <Mark />
-          placed<span>®</span>
-        </a>
-        <div className="nav-links">
-          <Link href="/">Explore</Link>
-          <button
-            className="nav-active"
-            onClick={() => {
-              setMode('edit');
-              setModal(null);
-            }}
-          >
-            Studio
-            <span className="nav-dot" />
-          </button>
-          <button onClick={() => setModal('models')}>My models</button>
-          <button onClick={() => setModal('gallery')}>
-            My gallery
-            {listings.length > 0 && <span className="count-badge">{listings.length}</span>}
-          </button>
-          <Link href="/why">Why Placed?</Link>
-          <Link href="/portfolio">Portfolio</Link>
-        </div>
-        <div className="nav-right">
-          <span className="local-badge">
-            <span />
-            LOCAL STUDIO
-          </span>
-          <button
-            className="icon-button help-button"
-            title="How the studio works"
-            aria-label="How the studio works"
-            onClick={() => setModal('help')}
-          >
-            <CircleHelp size={18} />
-          </button>
-          <div className="header-actions">
-            <span className="save-status">
-              {saved ? <CheckCheck size={15} /> : <LoaderCircle size={15} className="spin" />}
-              {saved ? 'Draft saved locally' : 'Saving…'}
-            </span>
-            <button
-              className="button secondary"
-              onClick={() => {
-                downloadJSON(draft);
-                notify('Campaign exported.');
-              }}
-            >
-              <ArrowDownToLine size={16} />
-              Export
-            </button>
-            <button className="button primary" onClick={() => setModal('publish')}>
-              Publish canvas
-              <ArrowUpRight size={17} />
-            </button>
-          </div>
-          <span className="avatar">
-            Y<span />
-          </span>
-        </div>
-      </nav>
+      <MarketNav />
+      <div className="studio-toolbar">
+        <span className="save-status">
+          {saved ? <CheckCheck size={15} /> : <LoaderCircle size={15} className="spin" />}
+          {saved ? 'Draft saved locally' : 'Saving…'}
+        </span>
+        <button
+          className="icon-button"
+          aria-label="How the studio works"
+          title="How the studio works"
+          onClick={() => setModal('help')}
+        >
+          <CircleHelp size={18} />
+        </button>
+        <button
+          className="button secondary"
+          onClick={() => {
+            downloadJSON(draft);
+            notify('Draft exported.');
+          }}
+        >
+          <ArrowDownToLine size={16} />
+          Export
+        </button>
+        <button className="button primary" onClick={() => setModal('publish')}>
+          Publish asset
+          <ArrowUpRight size={17} />
+        </button>
+      </div>
       <section className="campaign-strip" aria-label="Campaign details">
         <div className="campaign-strip-label">
           <span className="step-label">03 / THE MOMENT</span>
@@ -1065,15 +1038,6 @@ export default function Studio() {
                 </span>
               </h2>
             </div>
-            <button
-              className="stage-icon"
-              aria-label={expanded ? 'Exit full-screen studio' : 'Open full-screen studio'}
-              aria-pressed={expanded}
-              title={expanded ? 'Exit full screen (Esc)' : 'Open full-screen studio'}
-              onClick={() => setExpanded((e) => !e)}
-            >
-              {expanded ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
-            </button>
           </div>
           <div className="mobile-panel-switch" aria-label="Studio menus">
             <button
@@ -1095,27 +1059,64 @@ export default function Studio() {
               <Layers3 size={17} /> Placements
             </button>
           </div>
-          <div className="stage-tabs">
-            <button className={mode === 'edit' ? 'active' : ''} onClick={() => setMode('edit')}>
-              <Layers3 size={13} />
-              Editor
-            </button>
-            <button
-              className={mode === 'preview' ? 'active' : ''}
-              onClick={() => {
-                setMode('preview');
-                setPlacing(null);
-                camera('iso');
-              }}
-            >
-              <Eye size={13} />
-              Sponsor view
-            </button>
+          <div className="studio-view-tools">
+            <div className="stage-tabs">
+              <button className={mode === 'edit' ? 'active' : ''} onClick={() => setMode('edit')}>
+                <Layers3 size={13} />
+                Editor
+              </button>
+              <button
+                className={mode === 'preview' ? 'active' : ''}
+                onClick={() => {
+                  setMode('preview');
+                  setPlacing(null);
+                  camera('iso');
+                }}
+              >
+                <Eye size={13} />
+                Sponsor view
+              </button>
+            </div>
+            <div className="studio-tool-icons">
+              <button
+                className="stage-icon"
+                title="Saved models"
+                aria-label="Saved models"
+                onClick={() => setModal('models')}
+              >
+                <Box size={18} />
+              </button>
+              <button
+                className="stage-icon"
+                title="Local gallery"
+                aria-label="Local gallery"
+                onClick={() => setModal('gallery')}
+              >
+                <ImagePlus size={18} />
+              </button>
+              <button
+                className="stage-icon"
+                aria-label={expanded ? 'Exit full-screen studio' : 'Open full-screen studio'}
+                aria-pressed={expanded}
+                title={expanded ? 'Exit full screen (Esc)' : 'Open full-screen studio'}
+                onClick={() => setExpanded((value) => !value)}
+              >
+                {expanded ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
+              </button>
+            </div>
           </div>
           <Viewer
             draft={draft}
             selectedId={selectedId}
-            onSelect={select}
+            onSelect={(id) => {
+              setSelectedId(id);
+              setActiveTab('spot');
+              if (id && mode === 'edit') {
+                setPlacing('move');
+                setAutoRotate(false);
+                setMobilePanel(null);
+              }
+            }}
             placing={Boolean(placing)}
             onPlace={place}
             command={command}
@@ -1133,7 +1134,7 @@ export default function Studio() {
             <i />
             <span>
               {money(total)}
-              <small>OPENING VALUE</small>
+              <small>PREVIEW VALUE</small>
             </span>
           </div>
           {placing && (
@@ -1266,11 +1267,11 @@ export default function Studio() {
                   <h3 className="preview-spot-title">{selected.name}</h3>
                 )}
                 <label className="field">
-                  {mode === 'edit' ? 'Starting price' : 'Opening bid'}
+                  {mode === 'edit' ? 'Preview price' : 'Preview price'}
                   <div className="price-input">
                     <span>$</span>
                     <input
-                      aria-label="Starting price in dollars"
+                      aria-label="Preview price in dollars"
                       readOnly={mode === 'preview'}
                       type="number"
                       min="1"
@@ -1283,41 +1284,47 @@ export default function Studio() {
                 </label>
                 {mode === 'edit' && (
                   <div className="spot-controls">
-                    <div className="range-row">
-                      <label htmlFor="spot-width">Width</label>
-                      <span>{selected.width.toFixed(2)} ×</span>
+                    <div className="dimension-control">
+                      <div className="range-row">
+                        <label htmlFor="spot-width">Width</label>
+                        <span>{selected.width.toFixed(2)} ×</span>
+                      </div>
+                      <input
+                        id="spot-width"
+                        type="range"
+                        min="0.15"
+                        max="5"
+                        step="0.01"
+                        value={selected.width}
+                        onChange={(e) => patchSpot({ width: Number(e.target.value) })}
+                      />
                     </div>
-                    <input
-                      id="spot-width"
-                      type="range"
-                      min="0.15"
-                      max="5"
-                      step="0.01"
-                      value={selected.width}
-                      onChange={(e) => patchSpot({ width: Number(e.target.value) })}
-                    />
-                    <div className="range-row">
-                      <label htmlFor="spot-height">Height</label>
-                      <span>{selected.height.toFixed(2)} ×</span>
+                    <div className="dimension-control">
+                      <div className="range-row">
+                        <label htmlFor="spot-height">Height</label>
+                        <span>{selected.height.toFixed(2)} ×</span>
+                      </div>
+                      <input
+                        id="spot-height"
+                        type="range"
+                        min="0.12"
+                        max="5"
+                        step="0.01"
+                        value={selected.height}
+                        onChange={(e) => patchSpot({ height: Number(e.target.value) })}
+                      />
                     </div>
-                    <input
-                      id="spot-height"
-                      type="range"
-                      min="0.12"
-                      max="5"
-                      step="0.01"
-                      value={selected.height}
-                      onChange={(e) => patchSpot({ height: Number(e.target.value) })}
-                    />
                     <button
                       className={`move-button ${placing === 'move' ? 'active' : ''}`}
+                      aria-pressed={placing === 'move'}
                       onClick={() => {
+                        setAutoRotate(false);
                         setPlacing(placing === 'move' ? null : 'move');
                         setMobilePanel(null);
                       }}
                     >
                       <Move size={13} />
-                      Move on surface
+                      {placing === 'move' ? 'Cancel moving' : 'Move placement'}
                       <ArrowUpRight size={13} />
                     </button>
                   </div>
@@ -1378,7 +1385,7 @@ export default function Studio() {
                       className="button primary full"
                       onClick={() =>
                         notify(
-                          'This is a local visual preview. Bidding will arrive with the EVM integration.',
+                          'This is a local preview. Publish your asset, then open an auction for this slot.',
                         )
                       }
                     >
@@ -1551,13 +1558,13 @@ export default function Studio() {
                 <strong>{draft.spots.length}</strong>placements
               </span>
               <span>
-                <strong>{money(total)}</strong>opening value
+                <strong>{money(total)}</strong>preview value
               </span>
             </div>
           </div>
           <p className="modal-description">
-            Save your canvas and continue to the local marketplace. Register the asset, set auction
-            terms, and test funded bids using simulated wallets and demo USDC.
+            Save your canvas and publish your asset on Sepolia with your wallet. Create auctions
+            from Portfolio after publishing. Financing is optional and can be added later.
           </p>
           {campaignErrors.length > 0 && (
             <div className="form-error">

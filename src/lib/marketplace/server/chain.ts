@@ -12,15 +12,27 @@ const rpcClient = createPublicClient({
   batch: { multicall: { wait: 20 } },
   transport: rpcTransport(),
 });
+// eth_getLogs is the expensive call (75 CU on Alchemy, capped at 10 blocks on
+// its free plan). PublicNode and Tenderly serve 50,000-block ranges for free,
+// so log scans go there first and only fall back to the primary provider.
+export const logsClient = createPublicClient({
+  chain: marketplaceChain,
+  transport: rpcTransport([
+    'https://ethereum-sepolia-rpc.publicnode.com',
+    'https://sepolia.gateway.tenderly.co',
+    process.env.SEPOLIA_RPC_URL,
+  ]),
+});
 // Free RPC plans rate-limit (429) under several testers polling at once, so
 // fall through to public Sepolia endpoints instead of failing every request.
-function rpcTransport() {
-  const urls = [
+function rpcTransport(
+  candidates = [
     process.env.SEPOLIA_RPC_URL,
     'https://ethereum-sepolia-rpc.publicnode.com',
-    'https://sepolia.drpc.org',
-    'https://1rpc.io/sepolia',
-  ].filter((url, index, all): url is string => Boolean(url) && all.indexOf(url) === index);
+    'https://sepolia.gateway.tenderly.co',
+  ],
+) {
+  const urls = candidates.filter((url, index, all): url is string => Boolean(url) && all.indexOf(url) === index);
   return fallback(
     urls.map((url) =>
       http(url, {

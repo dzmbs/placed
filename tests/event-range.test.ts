@@ -4,11 +4,16 @@ import { readEventRange } from '../src/lib/marketplace/event-range';
 
 test('deployment scans cover every block once within public RPC range limits', async () => {
   const ranges: [bigint, bigint][] = [];
-  const logs = await readEventRange(100n, 1239n, async (from, to) => {
-    assert.ok(to - from + 1n <= 500n);
-    ranges.push([from, to]);
-    return [from, to];
-  });
+  const logs = await readEventRange(
+    100n,
+    1239n,
+    async (from, to) => {
+      assert.ok(to - from + 1n <= 500n);
+      ranges.push([from, to]);
+      return [from, to];
+    },
+    [500n],
+  );
   assert.deepEqual(ranges, [
     [100n, 599n],
     [600n, 1099n],
@@ -30,10 +35,15 @@ test('single-block scans are inclusive and future ranges make no requests', asyn
 
 test('a failed chunk rejects the scan rather than returning incomplete activity', async () => {
   await assert.rejects(
-    readEventRange(0n, 1000n, async (from) => {
-      if (from === 500n) throw new Error('RPC unavailable');
-      return [from];
-    }),
+    readEventRange(
+      0n,
+      1000n,
+      async (from) => {
+        if (from === 500n) throw new Error('RPC unavailable');
+        return [from];
+      },
+      [500n],
+    ),
     /RPC unavailable/,
   );
 });

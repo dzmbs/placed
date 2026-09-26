@@ -18,11 +18,11 @@ test('persisted cursors survive indexer restarts and only fetch new blocks', asy
     return [log(to)];
   };
   const hash = async (block: bigint) => `a:${block}`;
-  const first = new EventIndex(db);
+  const first = new EventIndex(db, [500n]);
   await first.read('auction', 100n, 1100n, load, hash);
   assert.equal(ranges.length, 3);
   ranges.length = 0;
-  const restarted = new EventIndex(db);
+  const restarted = new EventIndex(db, [500n]);
   const events = await restarted.read('auction', 100n, 1102n, load, hash);
   assert.deepEqual(ranges, [[1101n, 1102n]]);
   assert.equal(events.length, 4);
@@ -39,7 +39,7 @@ test('persisted cursors survive indexer restarts and only fetch new blocks', asy
 });
 test('all wallets share one sync and a newer waiting caller advances the cursor', async () => {
   const db = new DatabaseSync(':memory:');
-  const index = new EventIndex(db);
+  const index = new EventIndex(db, [500n]);
   const ranges: [bigint, bigint][] = [];
   const load = async (from: bigint, to: bigint) => {
     ranges.push([from, to]);
@@ -62,7 +62,7 @@ test('all wallets share one sync and a newer waiting caller advances the cursor'
 });
 test('a failed chunk does not publish partial history or advance the cursor', async () => {
   const db = new DatabaseSync(':memory:');
-  const index = new EventIndex(db);
+  const index = new EventIndex(db, [500n]);
   const hash = async (block: bigint) => `a:${block}`;
   await index.read('shared', 0n, 9n, async (_, to) => [log(to)], hash);
   await assert.rejects(
@@ -84,7 +84,7 @@ test('a failed chunk does not publish partial history or advance the cursor', as
 });
 test('a reorg removes discarded bids rather than duplicating them', async () => {
   const db = new DatabaseSync(':memory:');
-  const index = new EventIndex(db);
+  const index = new EventIndex(db, [500n]);
   await index.read(
     'shared',
     1n,

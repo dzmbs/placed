@@ -27,7 +27,10 @@ export function initializeEventIndex(db: DatabaseSync) {
 }
 export class EventIndex {
   private pending = new Map<string, Promise<void>>();
-  constructor(private db: DatabaseSync) {
+  constructor(
+    private db: DatabaseSync,
+    private spans?: bigint[],
+  ) {
     initializeEventIndex(db);
   }
   async read<T extends IndexedLog>(
@@ -78,7 +81,7 @@ export class EventIndex {
       if (reset) from = start;
     }
     if (from > to) return;
-    const logs = await readEventRange(from, to, load);
+    const logs = await readEventRange(from, to, load, this.spans);
     const hash = await blockHash(to);
     for (const log of logs) {
       if (log.blockNumber < from || log.blockNumber > to)

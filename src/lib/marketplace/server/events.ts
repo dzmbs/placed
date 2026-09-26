@@ -2,7 +2,7 @@ import 'server-only';
 import type { Abi, Address, ContractEventName, GetContractEventsReturnType } from 'viem';
 import { EventIndex } from '../event-index';
 import { database } from './database';
-import { publicClient, currentReadBlock } from './chain';
+import { publicClient, logsClient, currentReadBlock } from './chain';
 import { marketplaceChain, deploymentBlock, contracts } from '../config';
 import { ReadCache } from '../read-cache';
 import { createHash } from 'node:crypto';
@@ -39,7 +39,7 @@ export async function indexedEvents<
         params.fromBlock,
         params.toBlock,
         (fromBlock, toBlock) =>
-          publicClient.getContractEvents({ ...params, fromBlock, toBlock, strict: true }),
+          logsClient.getContractEvents({ ...params, fromBlock, toBlock, strict: true }),
         async (blockNumber) => (await publicClient.getBlock({ blockNumber })).hash,
       ),
     2000,

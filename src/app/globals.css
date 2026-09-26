@@ -13,7 +13,14 @@
 * {
   box-sizing: border-box;
 }
+/* Reserve the scrollbar on every page so short pages (studio) and long pages
+   (explore) centre the sticky header identically instead of jumping. */
+html {
+  scrollbar-gutter: stable;
+}
 body {
+  /* The full-bleed header spans 100vw, which includes the scrollbar. */
+  overflow-x: clip;
   margin: 0;
   background: var(--paper);
   color: var(--ink);

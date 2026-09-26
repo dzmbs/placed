@@ -66,6 +66,9 @@ function WalletBridge({ children }: { children: ReactNode }) {
   const { wallets, ready: walletsReady } = useWallets();
   const [selected, setSelected] = useState<string>();
   const [hidden, setHidden] = useState(false);
+  // Bumped on every Privy success so the check below re-runs even when the
+  // chosen wallet was already active (its address alone would not change).
+  const [chosen, setChosen] = useState(0);
   const active = hidden
     ? undefined
     : (wallets.find((w) => w.address.toLowerCase() === selected) ?? wallets[0]);
@@ -83,10 +86,13 @@ function WalletBridge({ children }: { children: ReactNode }) {
   function choose({ wallet }: { wallet: { address: string } }) {
     setHidden(false);
     setSelected(wallet.address.toLowerCase());
+    setChosen((value) => value + 1);
+    console.info('[wallet] Privy connected', { wallet: wallet.address });
     if (pending.current) pending.current.address = wallet.address.toLowerCase();
   }
-  function cancelled() {
+  function cancelled(error?: unknown) {
     if (pending.current) {
+      console.warn('[wallet] Privy connection failed or was closed', error);
       clearTimeout(pending.current.timer);
       pending.current.reject(new Error('Wallet connection cancelled.'));
       pending.current = undefined;
@@ -102,10 +108,18 @@ function WalletBridge({ children }: { children: ReactNode }) {
       clearTimeout(pending.current.timer);
       pending.current.resolve();
       pending.current = undefined;
+      console.info('[wallet] active', { wallet: active?.address, chainId: active?.chainId });
     }
     window.dispatchEvent(new Event('placed-wallet-change'));
-  }, [active?.address, active?.chainId, ready, walletsReady]);
+  }, [active?.address, active?.chainId, ready, walletsReady, chosen]);
   useEffect(() => () => cancelled(), []);
+  useEffect(() => {
+    console.info('[wallet] Privy state', {
+      ready,
+      walletsReady,
+      wallets: wallets.map((w) => w.address),
+    });
+  }, [ready, walletsReady, wallets]);
   const controls: Controls = {
     address: () => activeRef.current?.address as Address | undefined,
     provider: async () => {
@@ -119,7 +133,9 @@ function WalletBridge({ children }: { children: ReactNode }) {
         );
       if (activeRef.current && !change) return;
       await new Promise<void>((resolve, reject) => {
+        console.info('[wallet] opening Privy', { change });
         const timer = setTimeout(() => {
+          console.warn('[wallet] connection timed out waiting for Privy');
           pending.current = undefined;
           reject(new Error('Wallet connection timed out. Try again.'));
         }, 120000);

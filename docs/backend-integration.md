@@ -1,6 +1,6 @@
 # Marketplace integration
 
-The marketplace UI uses `MarketClient` in `src/lib/market-client.ts`. Supply the engineer's implementation there, or pass it to `MarketProvider`. The default is `null`: no wallet, listings, funds, verification results or receipts are fabricated. Without an adapter, the marketplace shows an unavailable state; Studio remains usable.
+The redesigned marketplace UI at `/` uses `MarketClient` in `src/lib/market-client.ts`. Connect the engineer's implementation there, or pass it to `MarketProvider`. The default is `null`: no wallet, listings, funds, verification results or receipts are fabricated. Without an adapter, the redesigned marketplace shows an unavailable state; Studio remains usable. The engineer's connected Sepolia UI is available separately at `/marketplace`.
 
 ## Adapter contract
 
@@ -26,6 +26,6 @@ The Studio-to-publish handoff continues to read `placed-market-pending-v1`; this
 
 ## Merge checks
 
-Verify account/chain changes during reviews, rejected signatures, failed confirmations, expiring quotes during approval, upload failures, outbid withdrawals, proof review, refunds and redemption against the real services. Inspect mobile bidding and trading, historical booking links, and the empty/unavailable states. Run `npm run check` before merge.
+Verify account/chain changes during reviews, rejected signatures, failed confirmations, expiring quotes during approval, upload failures, outbid withdrawals, proof review, refunds and redemption against the real services. Inspect desktop bidding and trading, historical booking links, and the empty/unavailable states. Run `npm run check` before merge.
 
-There are no marketplace API routes or wallet SDKs in this checkout yet. Existing `/api/assets`, `/api/models`, `/api/humans`, `/api/config` and `/api/generations` routes belong to Studio and must not be mistaken for marketplace endpoints.
+The merged backend provides `/api/marketplace` routes, Privy and World integrations, and contract clients under `src/lib/marketplace`. Use these services when implementing the adapter; see [integration setup](integrations.md). The `/api/assets`, `/api/models`, `/api/humans`, `/api/config` and `/api/generations` routes belong to Studio. The connected implementation currently targets Sepolia and includes testnet funding controls; its production configuration and the redesigned UI adapter remain integration work.

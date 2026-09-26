@@ -22,10 +22,36 @@ function rpcTransport() {
     'https://1rpc.io/sepolia',
   ].filter((url, index, all): url is string => Boolean(url) && all.indexOf(url) === index);
   return fallback(
-    urls.map((url) => http(url, { timeout: 20000, retryCount: 0 })),
+    urls.map((url) =>
+      http(url, {
+        timeout: 20000,
+        retryCount: 0,
+        onFetchRequest: (request) => countRpc(new URL(url).host, request),
+      }),
+    ),
     { retryCount: 1 },
   );
 }
+// Per-minute RPC usage by provider host and method, to see what spends the
+// provider's rate limit. Hosts only: provider URLs can embed API keys.
+const rpcUsage = new Map<string, number>();
+function countRpc(host: string, request: Request) {
+  void request
+    .clone()
+    .json()
+    .then((body: { method?: string } | { method?: string }[]) => {
+      for (const call of Array.isArray(body) ? body : [body]) {
+        const key = `${host} ${call.method ?? '?'}`;
+        rpcUsage.set(key, (rpcUsage.get(key) ?? 0) + 1);
+      }
+    })
+    .catch(() => {});
+}
+setInterval(() => {
+  if (!rpcUsage.size) return;
+  console.info('[rpc] last minute', Object.fromEntries(rpcUsage));
+  rpcUsage.clear();
+}, 60000).unref();
 const scope = new AsyncLocalStorage<{ number: bigint; hash?: string }>();
 const reads = new ReadCache(2048);
 // Pin related contract reads to one block and reuse identical reads across

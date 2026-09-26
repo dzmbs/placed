@@ -20,14 +20,14 @@ Placed was assessed against the supplied product specification, the current repo
 
 An advertising market has several jobs: define what can be sold; find relevant buyers and sellers; establish eligibility and fit; allocate scarce inventory; collect the creative and deliver it; measure what happened; settle payments and disputes. A marketplace directory handles only part of that chain.
 
-| Market model | Unit being purchased | How the match happens | Price and allocation | Implication for Placed |
-| --- | --- | --- | --- | --- |
-| Search advertising, represented by Google Ads | An opportunity to show an eligible ad in a particular context | Keywords, context, eligibility, and quality signals narrow the candidates | Auction ranking considers more than money, including relevance and quality | A highest-bid rule alone is not a sophisticated matching advantage |
-| Open-web programmatic advertising | Defined digital inventory and impression opportunities | Buyer software and seller software exchange structured requests; buyers apply targeting and budget rules | Open auctions, private transactions, and reserved negotiated inventory coexist | Standard descriptions and interoperability are already central to advertising |
-| Direct and programmatic outdoor advertising | A location, face, screen play, or campaign period | Geographic and audience planning, available units, budgets, and creative constraints | Negotiated bookings, auctions, and guaranteed takeovers | Physical space and time-bounded exclusivity are established products |
-| Creator sponsorship marketplaces | A creator service, content placement, or package | Profiles, audience information, search, inbound requests, and campaign applications | Listed packages, custom offers, and negotiated deals | Placed competes with mature creator discovery and transaction workflows |
-| Sports and event sponsorship | Rights and deliverables associated with an athlete, team, event, or venue | Relationships, prospecting data, proposals, and reciprocal brand fit | Negotiated rights packages, often with multiple obligations | An isolated logo rectangle may omit much of what the buyer values |
-| Personal-surface marketplaces in development | A specified body, clothing, or gear placement | Creator/event/placement discovery and sponsor approval | Proposed fixed prices or auctions | There is direct conceptual competition even in Placed's initial niche |
+| Market model                                  | Unit being purchased                                                      | How the match happens                                                                                    | Price and allocation                                                           | Implication for Placed                                                        |
+| --------------------------------------------- | ------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ | ----------------------------------------------------------------------------- |
+| Search advertising, represented by Google Ads | An opportunity to show an eligible ad in a particular context             | Keywords, context, eligibility, and quality signals narrow the candidates                                | Auction ranking considers more than money, including relevance and quality     | A highest-bid rule alone is not a sophisticated matching advantage            |
+| Open-web programmatic advertising             | Defined digital inventory and impression opportunities                    | Buyer software and seller software exchange structured requests; buyers apply targeting and budget rules | Open auctions, private transactions, and reserved negotiated inventory coexist | Standard descriptions and interoperability are already central to advertising |
+| Direct and programmatic outdoor advertising   | A location, face, screen play, or campaign period                         | Geographic and audience planning, available units, budgets, and creative constraints                     | Negotiated bookings, auctions, and guaranteed takeovers                        | Physical space and time-bounded exclusivity are established products          |
+| Creator sponsorship marketplaces              | A creator service, content placement, or package                          | Profiles, audience information, search, inbound requests, and campaign applications                      | Listed packages, custom offers, and negotiated deals                           | Placed competes with mature creator discovery and transaction workflows       |
+| Sports and event sponsorship                  | Rights and deliverables associated with an athlete, team, event, or venue | Relationships, prospecting data, proposals, and reciprocal brand fit                                     | Negotiated rights packages, often with multiple obligations                    | An isolated logo rectangle may omit much of what the buyer values             |
+| Personal-surface marketplaces in development  | A specified body, clothing, or gear placement                             | Creator/event/placement discovery and sponsor approval                                                   | Proposed fixed prices or auctions                                              | There is direct conceptual competition even in Placed's initial niche         |
 
 Google describes auction selection using bids alongside quality and contextual factors. Google Ad Manager separately supports ad units, agreements, dated line items, and creative assignments. Reserved Programmatic Guaranteed deals and non-reserved Preferred Deals demonstrate that the incumbent system supports more than spot auctions. [Google Ads auction](https://support.google.com/google-ads/answer/6366577?hl=en-GB), [Ad Manager elements](https://support.google.com/admanager/answer/6012282?hl=en), [Programmatic deal types](https://support.google.com/admanager/answer/7637485?hl=en).
 
@@ -111,16 +111,16 @@ The incumbent digital ecosystem already has interoperability and seller-transpar
 
 ## Choices that could weaken the market
 
-| Design choice | Failure mode | Better direction to test |
-| --- | --- | --- |
-| Auction every slot | Few relevant bidders, delay, price uncertainty, and repeated empty auctions | Fixed-price booking and offers for ordinary inventory; timed auctions for genuinely contested placements |
-| Allocate only by the highest payment | Incompatible artwork or sponsor categories; creator reputational costs | Establish seller restrictions and creative eligibility before competitive allocation |
-| Sell every rectangle separately | Buyers may need a package; competing logos can reduce each other's value | Category exclusivity, bundles, total ad-load limits, and explicit compatibility rules |
-| Treat all surfaces as one market | Buyers cannot compare relevance or execution requirements | Common underlying schema with category-specific discovery and fulfillment |
-| Require every buyer to use unfamiliar crypto tools | Procurement and participation friction can outweigh payment advantages | Measure completion rates; design account, agency, and payment access for the target users |
-| Use one post-campaign photo as full proof | Duration, audience, location, and continuous visibility remain uncertain | Define evidence by category and separate placement verification from exposure measurement |
-| Depend on creators bringing all demand | The product remains useful listing software but has limited marketplace matching value | Measure purchases initiated by marketplace discovery, including cross-creator repeat buying |
-| Finance assets before recurring demand exists | Financial activity can obscure a weak advertising business | Prove fulfilled campaigns and renewals before emphasizing revenue financing |
+| Design choice                                      | Failure mode                                                                           | Better direction to test                                                                                 |
+| -------------------------------------------------- | -------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| Auction every slot                                 | Few relevant bidders, delay, price uncertainty, and repeated empty auctions            | Fixed-price booking and offers for ordinary inventory; timed auctions for genuinely contested placements |
+| Allocate only by the highest payment               | Incompatible artwork or sponsor categories; creator reputational costs                 | Establish seller restrictions and creative eligibility before competitive allocation                     |
+| Sell every rectangle separately                    | Buyers may need a package; competing logos can reduce each other's value               | Category exclusivity, bundles, total ad-load limits, and explicit compatibility rules                    |
+| Treat all surfaces as one market                   | Buyers cannot compare relevance or execution requirements                              | Common underlying schema with category-specific discovery and fulfillment                                |
+| Require every buyer to use unfamiliar crypto tools | Procurement and participation friction can outweigh payment advantages                 | Measure completion rates; design account, agency, and payment access for the target users                |
+| Use one post-campaign photo as full proof          | Duration, audience, location, and continuous visibility remain uncertain               | Define evidence by category and separate placement verification from exposure measurement                |
+| Depend on creators bringing all demand             | The product remains useful listing software but has limited marketplace matching value | Measure purchases initiated by marketplace discovery, including cross-creator repeat buying              |
+| Finance assets before recurring demand exists      | Financial activity can obscure a weak advertising business                             | Prove fulfilled campaigns and renewals before emphasizing revenue financing                              |
 
 The auction tradeoff is material: a rule can transparently allocate bids without finding the best match. For unusual sponsorships, mutual fit and contractual completeness often matter before price competition begins. Likewise, independently auctioning two adjacent slots can create a poor result if each buyer expects category exclusivity.
 
@@ -128,14 +128,14 @@ Auctions also commit buyer capital while participation is uncertain. Immediate o
 
 ## What the blockchain components actually contribute
 
-| Component | Plausible contribution | What remains outside that contribution |
-| --- | --- | --- |
-| Funded bidding and contract accounting | Makes accepted funding, allocation, withdrawal credits, and released payment splits explicit | Does not establish a suitable buyer, surface rights, delivered exposure, or an optimal price |
-| USDC settlement | A shared settlement denomination and programmable transfer path | Does not eliminate onboarding, conversion, operational, or procurement costs |
-| ENS asset and slot identities | A reusable lookup and permission structure | Does not by itself create adopted interoperability or validate offchain ownership |
-| World participant verification | A check supporting participant uniqueness within the configured scope | Does not establish brand authority, honest behavior, audience quality, or prevent collusion between distinct people |
-| AI-assisted proof review | Can help compare submitted artwork and placement evidence | A reviewer still needs a policy; a photo cannot establish every campaign promise |
-| Asset revenue token and vault | Can automatically route covered released receipts to a defined financial claim | Does not create ad demand or capture off-platform receipts by itself |
+| Component                              | Plausible contribution                                                                       | What remains outside that contribution                                                                              |
+| -------------------------------------- | -------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| Funded bidding and contract accounting | Makes accepted funding, allocation, withdrawal credits, and released payment splits explicit | Does not establish a suitable buyer, surface rights, delivered exposure, or an optimal price                        |
+| USDC settlement                        | A shared settlement denomination and programmable transfer path                              | Does not eliminate onboarding, conversion, operational, or procurement costs                                        |
+| ENS asset and slot identities          | A reusable lookup and permission structure                                                   | Does not by itself create adopted interoperability or validate offchain ownership                                   |
+| World participant verification         | A check supporting participant uniqueness within the configured scope                        | Does not establish brand authority, honest behavior, audience quality, or prevent collusion between distinct people |
+| AI-assisted proof review               | Can help compare submitted artwork and placement evidence                                    | A reviewer still needs a policy; a photo cannot establish every campaign promise                                    |
+| Asset revenue token and vault          | Can automatically route covered released receipts to a defined financial claim               | Does not create ad demand or capture off-platform receipts by itself                                                |
 
 For the advertiser market, the most useful blockchain claim is narrower and more concrete than "trustless advertising": **the funding and settlement rules can be shared and inspected, while physical fulfillment still needs evidence and accountable dispute resolution.**
 
@@ -157,19 +157,19 @@ Local references: [README](../README.md), [backend integration](backend-integrat
 
 My recommendation is to begin with one event or recurring community where both sellers and advertisers already have a reason to participate. Conference apparel and gear is a coherent initial experiment given the existing demo evidence. Require a clearly defined event, deliverables, organizer/venue permissions where applicable, artwork deadlines, and buyer categories. Test recurring creator backdrops separately if the financing narrative needs durable inventory.
 
-Alvin Roth's market-design framework emphasizes sufficient participation, the ability to evaluate and complete transactions without congestion, and safe, simple participation. Applied here, the priority is a dense relevant market with workable purchasing rules, not the largest number of heterogeneous listings. This application is our inference. [Roth, *What Have We Learned from Market Design?*](https://stanford.edu/~alroth/papers/2008_Hahn_Lecture_EJ.pdf).
+Alvin Roth's market-design framework emphasizes sufficient participation, the ability to evaluate and complete transactions without congestion, and safe, simple participation. Applied here, the priority is a dense relevant market with workable purchasing rules, not the largest number of heterogeneous listings. This application is our inference. [Roth, _What Have We Learned from Market Design?_](https://stanford.edu/~alroth/papers/2008_Hahn_Lecture_EJ.pdf).
 
 An initial pilot should compare Placed with how the same type of sponsorship is presently arranged, including DMs and creator storefronts. Use comparable seller and buyer cohorts or a staged within-seller comparison; viral outliers are unsuitable controls. Record actual administrative time and all-in costs rather than assuming the marketplace saves money.
 
-| Hypothesis | What to measure | What would weaken it |
-| --- | --- | --- |
-| Easier inventory creation | Time to a complete, bookable listing; generation and support cost | More work than a photo and simple booking form |
-| Better buyer discovery | Qualified matches per brief; purchases from buyers the seller did not bring | Almost every sale still depends on the creator's launch audience |
-| Better liquidity | Relevant buyers per available slot; funded bids; sell-through by cohort | Many listings with no serious interest or one bidder |
-| Lower transaction cost | Buyer and seller handling time; total fees and support cost per fulfilled booking | Savings in checkout outweighed by proof disputes and manual service |
-| Credible delivery | Fulfilled campaigns, refund/dispute rates, time to settlement | Strong funding data but weak delivery confidence |
-| Repeatable value | Renewals and cross-creator repeat purchases without subsidies | One-off novelty spending that disappears after the launch |
-| Useful portability | A second interface books or reads the same authoritative inventory successfully | Names and metadata exist but only Placed can practically use them |
+| Hypothesis                | What to measure                                                                   | What would weaken it                                                |
+| ------------------------- | --------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| Easier inventory creation | Time to a complete, bookable listing; generation and support cost                 | More work than a photo and simple booking form                      |
+| Better buyer discovery    | Qualified matches per brief; purchases from buyers the seller did not bring       | Almost every sale still depends on the creator's launch audience    |
+| Better liquidity          | Relevant buyers per available slot; funded bids; sell-through by cohort           | Many listings with no serious interest or one bidder                |
+| Lower transaction cost    | Buyer and seller handling time; total fees and support cost per fulfilled booking | Savings in checkout outweighed by proof disputes and manual service |
+| Credible delivery         | Fulfilled campaigns, refund/dispute rates, time to settlement                     | Strong funding data but weak delivery confidence                    |
+| Repeatable value          | Renewals and cross-creator repeat purchases without subsidies                     | One-off novelty spending that disappears after the launch           |
+| Useful portability        | A second interface books or reads the same authoritative inventory successfully   | Names and metadata exist but only Placed can practically use them   |
 
 Report medians and distributions, not only the biggest sale. Separate campaign value from creator proceeds, released versus held funds, financing proceeds, and secondary trading volume. Where exposure is measured, state the method and avoid treating it as proven incremental sales.
 

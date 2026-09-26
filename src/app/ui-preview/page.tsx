@@ -71,13 +71,35 @@ function build(): MarketState {
     now,
     current: me,
     people: [
-      { id: me, name: me, address: me, role: 'creator', verified: true, usdc: 10_000 * U, approvals: {} },
-      { id: other, name: other, address: other, role: 'creator', verified: true, usdc: 0, approvals: {} },
+      {
+        id: me,
+        name: me,
+        address: me,
+        role: 'creator',
+        verified: true,
+        usdc: 10_000 * U,
+        approvals: {},
+      },
+      {
+        id: other,
+        name: other,
+        address: other,
+        role: 'creator',
+        verified: true,
+        usdc: 0,
+        approvals: {},
+      },
     ],
     assets,
     campaigns: [
-      c('c1', assets[0], 2 * 3600_000 + 14 * 60_000, [[other, 120], [me, 150]]),
-      c('c2', assets[1], 40 * 60_000, [[me, 900], [other, 1200]]),
+      c('c1', assets[0], 2 * 3600_000 + 14 * 60_000, [
+        [other, 120],
+        [me, 150],
+      ]),
+      c('c2', assets[1], 40 * 60_000, [
+        [me, 900],
+        [other, 1200],
+      ]),
       c('c3', assets[3], 3 * 86400_000, []),
       c('c4', assets[4], 20 * 3600_000, [[other, 45]]),
     ],
@@ -92,7 +114,9 @@ function build(): MarketState {
 
 export default function Page() {
   const [page] = useState(() =>
-    typeof window === 'undefined' ? 'explore' : new URLSearchParams(location.search).get('p') ?? 'explore',
+    typeof window === 'undefined'
+      ? 'explore'
+      : (new URLSearchParams(location.search).get('p') ?? 'explore'),
   );
   const client = useMemo<MarketClient>(() => {
     let state = build();

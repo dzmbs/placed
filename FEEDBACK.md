@@ -12,17 +12,29 @@ Migration can be triggered directly on the official strategy, outside our coordi
 
 Most valuable improvement: a versioned end-to-end Sepolia example covering Permit2, partial-exit hints, claims, fee-controller configuration, migration recovery and the exact router action encoding. Include both successful and failed fundraising paths.
 
-Public sale/trade evidence is not recorded yet. The shared contracts and ENS parent are deployed, and the first asset and slot are published. The remaining public demo run and feedback form submission are pending.
+On Sepolia the shared contracts and ENS parent are deployed and assets and slots are published from the live demo. One public token sale ran with a 30 block bidding window, got no bids during a period when our app was rate limited and correctly ended below its minimum raise. A successful public sale, trade and redemption are still pending.
+
+A sale window measured in blocks was easy to get wrong. Thirty blocks sounds long and is about six minutes on Sepolia. Showing wall clock time next to block ranges in the docs and examples would help.
 
 ## World IDKit
 
-The trust moment is creator publishing and the first funded advertising bid. Proof of Human is sufficient for participant uniqueness; we do not collect legal names or claim that it proves ownership of the asset. Investing and trading remain permissionless.
+**Trust moment.** Publishing an asset and placing a funded advertising bid. Both are where one person with many wallets can list fake assets or bid against themselves. Proof of Human is the minimum sufficient credential: we need uniqueness, not identity, so we never collect names or documents. It does not prove asset ownership and we do not claim it does. Investing and trading stay permissionless. Details are in [docs/world-id.md](docs/world-id.md).
 
-Implemented: IDKit 4.3.0 v4 requests, wallet-bound server-signed RP context, official server verification, private uniqueness mapping, onchain authorization and rejected/cancelled paths. Local HTTP checks confirmed request signing and rejection. Automated policy checks reject substituted wallets, actions, nonces, environments and credentials. Simulator testing exposed two integration errors: disabling Proof of Human's documented Orb fallback and treating `expires_at_min` as the credential expiry. Both are corrected, with v3 Orb and v4 human payloads forwarded unchanged to the official verifier. Device and document proofs remain rejected.
+**What we built.** IDKit 4.3.0 with v4 requests, a wallet-bound RP request signed on our server, result checks on nonce, action, environment, credential and wallet signal, the official v4 verifier, private one-person-one-wallet storage and an onchain participant voucher. Cancelled, unavailable, replayed and conflicting identities each get their own message and leave publishing and bidding locked. All verifications so far used the staging simulator, not production Proof of Human.
 
-The user completed simulator verification and published an asset and slot on Sepolia on 27 September 2026. This is a test credential flow, not production Proof of Human. Time to first success was not measured. The current production verification endpoint requires a 24-hour staging window and a server-only staging token; older integration guidance omitted that requirement. Setup tooling now opens the window through the official Portal MCP and privately stores the token.
+**Time to first success.** About 35 minutes from our first committed World integration to the first verified simulator proof. Work before that commit was not timed.
 
-Most valuable improvement: make the differences between v3 action proofs, v4 RP requests, staging credentials and production Proof of Human especially clear in a single migration example.
+**Friction.**
+
+- The production verifier needs a developer-opened 24 hour staging window and a server-only staging token for simulator proofs. Older guidance did not mention it. We found it through `environment_not_allowed` and the Portal source.
+- We first disabled Proof of Human's documented Orb fallback and treated `expires_at_min` as the credential expiry. Both were our mistakes, but the docs made them easy to make.
+- We reused one signed request per wallet to avoid rate limits. After a proof was produced for that nonce, a retry could fail. The docs do say to sign a fresh request each time, but the reason (`duplicate_nonce`) is only in the error code table.
+- `onError` gives a code and a debug report. Our first version showed a generic message and threw both away, which made every failure look the same. Logging them was the single most useful debugging change.
+- In staging, the simulator returned the same World ID 4.0 nullifier for every simulator identity we picked. With one-person-one-wallet storage only our first test wallet could ever verify, so every other tester got a conflict. We now scope staging identities to the wallet. Production stays strict.
+
+**Missing capability or documentation.** A clear statement of how simulator identities map to v4 nullifiers, and a way to get a distinct test person per tester in staging. We could not tell whether our uniqueness logic was wrong or the simulator was.
+
+**One improvement with the greatest impact.** A single end-to-end staging example that covers the staging token, fresh request signing on retry, `onError` codes with the debug report, and how to test one-person-one-wallet with several simulator identities.
 
 ## ENSv2
 

@@ -17,8 +17,14 @@ export function assertLocalRequest(request: Request) {
     .filter((value) => value.trim())
     .map((value) => new URL(value.trim()));
   const local = ['localhost', '127.0.0.1', '[::1]'].includes(new URL(`http://${host}`).hostname);
-  if (!local && !allowed.some((url) => url.host === host))
+  if (!local && !allowed.some((url) => url.host === host)) {
+    console.warn('[studio] rejected host', {
+      host,
+      origin: request.headers.get('origin'),
+      forwardedHost: request.headers.get('x-forwarded-host'),
+    });
     throw new Error('This studio accepts local requests only.');
+  }
   const origin = request.headers.get('origin');
   if (
     origin &&

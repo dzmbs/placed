@@ -66,9 +66,11 @@ export function failure(error: unknown): Response {
 // RPC URLs often embed API keys, so logs keep the reason but never a URL.
 function describeError(error: unknown) {
   const e = error as { name?: string; shortMessage?: string; message?: string; details?: string };
-  return [e?.name, e?.shortMessage ?? e?.message, e?.details]
-    .filter(Boolean)
-    .join(' | ')
-    .replace(/https?:\/\/\S+/g, '<url>')
-    .slice(0, 1000) || String(error);
+  return (
+    [e?.name, e?.shortMessage ?? e?.message, e?.details]
+      .filter(Boolean)
+      .join(' | ')
+      .replace(/https?:\/\/\S+/g, '<url>')
+      .slice(0, 1000) || String(error)
+  );
 }

@@ -44,7 +44,8 @@ test('shrinks the scan span when a free RPC plan rejects the block range', async
     calls.push([from, to]);
     if (to - from + 1n > 10n)
       throw Object.assign(new Error('RPC Request failed.'), {
-        details: 'Under the Free tier plan, you can make eth_getLogs requests with up to a 10 block range.',
+        details:
+          'Under the Free tier plan, you can make eth_getLogs requests with up to a 10 block range.',
       });
     return [from];
   });

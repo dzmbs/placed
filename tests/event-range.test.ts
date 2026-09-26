@@ -37,3 +37,21 @@ test('a failed chunk rejects the scan rather than returning incomplete activity'
     /RPC unavailable/,
   );
 });
+
+test('shrinks the scan span when a free RPC plan rejects the block range', async () => {
+  const calls: bigint[][] = [];
+  const logs = await readEventRange(0n, 24n, async (from, to) => {
+    calls.push([from, to]);
+    if (to - from + 1n > 10n)
+      throw Object.assign(new Error('RPC Request failed.'), {
+        details: 'Under the Free tier plan, you can make eth_getLogs requests with up to a 10 block range.',
+      });
+    return [from];
+  });
+  assert.deepEqual(logs, [0n, 10n, 20n]);
+  assert.deepEqual(calls.slice(-3), [
+    [0n, 9n],
+    [10n, 19n],
+    [20n, 24n],
+  ]);
+});

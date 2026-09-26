@@ -1,0 +1,78 @@
+{
+  "reviewed": true,
+  "source": "MakeHuman CC0 / local Blender",
+  "body": "male-athletic-body.glb",
+  "outfits": [
+    "male-casual-outfit.glb",
+    "male-athletic-outfit.glb"
+  ],
+  "hiddenOutfitMeshes": [
+    "jeans",
+    "sport-shirt"
+  ],
+  "hiddenBodyMeshes": [
+    "body-under-bottom",
+    "body-under-shoes",
+    "body-under-top"
+  ],
+  "spots": [
+    {
+      "id": "shirt-front",
+      "name": "Shirt / front",
+      "position": [
+        0,
+        2.0299999713897705,
+        0.026493072509765625
+      ],
+      "rotation": [
+        -0.02723812498152256,
+        0.025774909183382988,
+        0.0007021559285931289
+      ],
+      "width": 0.46,
+      "height": 0.36,
+      "price": 450,
+      "meshName": "shirt",
+      "projection": true
+    },
+    {
+      "id": "shirt-back",
+      "name": "Shirt / back",
+      "position": [
+        0,
+        2.0299999713897705,
+        -0.34632444381713867
+      ],
+      "rotation": [
+        -0.09985609352588654,
+        3.040407180786133,
+        0.010120063088834286
+      ],
+      "width": 0.46,
+      "height": 0.36,
+      "price": 350,
+      "meshName": "shirt",
+      "projection": true
+    },
+    {
+      "id": "leg-front",
+      "name": "Left leg / front",
+      "position": [
+        0.20000000298023224,
+        1.2999999523162842,
+        -0.02035045623779297
+      ],
+      "rotation": [
+        -0.018437324091792107,
+        0.011628839187324047,
+        0.00021442417346406728
+      ],
+      "width": 0.21,
+      "height": 0.23,
+      "price": 200,
+      "meshName": "shorts",
+      "projection": true
+    }
+  ],
+  "license": "CC0-1.0"
+}

@@ -1,0 +1,82 @@
+{
+  "reviewed": true,
+  "source": "Meshy/original",
+  "spots": [
+    {
+      "id": "human-front",
+      "name": "Bodice / front",
+      "position": [
+        0.0,
+        1.8799999952316284,
+        0.22178363800048828
+      ],
+      "rotation": [
+        -0.04213155806064606,
+        -0.0011491947807371616,
+        -0.0
+      ],
+      "width": 0.43,
+      "height": 0.3,
+      "price": 450,
+      "meshName": "imported-surface-0",
+      "projection": true
+    },
+    {
+      "id": "human-back",
+      "name": "Bodice / back",
+      "position": [
+        0.0,
+        1.7960000038146973,
+        -0.07834196090698242
+      ],
+      "rotation": [
+        -0.20683524012565613,
+        3.0632874965667725,
+        -0.0
+      ],
+      "width": 0.43,
+      "height": 0.3,
+      "price": 350,
+      "meshName": "imported-surface-0",
+      "projection": true
+    },
+    {
+      "id": "human-skirt",
+      "name": "Skirt / upper",
+      "position": [
+        0.0,
+        1.3760000467300415,
+        0.20524024963378906
+      ],
+      "rotation": [
+        -0.013830184005200863,
+        0.0067604705691337585,
+        0.0
+      ],
+      "width": 0.46,
+      "height": 0.4,
+      "price": 350,
+      "meshName": "imported-surface-0",
+      "projection": true
+    },
+    {
+      "id": "human-hem",
+      "name": "Skirt / lower",
+      "position": [
+        0.0,
+        0.8159999847412109,
+        0.2101612091064453
+      ],
+      "rotation": [
+        0.012677600607275963,
+        0.08322326093912125,
+        0.0
+      ],
+      "width": 0.46,
+      "height": 0.38,
+      "price": 300,
+      "meshName": "imported-surface-0",
+      "projection": true
+    }
+  ]
+}

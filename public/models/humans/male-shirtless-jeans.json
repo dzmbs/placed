@@ -1,0 +1,98 @@
+{
+  "reviewed": true,
+  "source": "MakeHuman CC0 / local Blender",
+  "body": "male-athletic-body.glb",
+  "outfits": [
+    "male-casual-outfit.glb",
+    "male-athletic-outfit.glb"
+  ],
+  "hiddenOutfitMeshes": [
+    "shirt",
+    "sport-shirt",
+    "shorts"
+  ],
+  "hiddenBodyMeshes": [
+    "body-under-bottom",
+    "body-under-shoes",
+    "body-under-jeans"
+  ],
+  "spots": [
+    {
+      "id": "chest-left",
+      "name": "Left chest",
+      "position": [
+        0.1599999964237213,
+        2.0799999237060547,
+        -0.030125141143798828
+      ],
+      "rotation": [
+        0.44492584466934204,
+        0.5544617176055908,
+        -0.24595235288143158
+      ],
+      "width": 0.23,
+      "height": 0.23,
+      "price": 450,
+      "meshName": "body-under-top",
+      "projection": true
+    },
+    {
+      "id": "chest-right",
+      "name": "Right chest",
+      "position": [
+        -0.1599999964237213,
+        2.0799999237060547,
+        -0.030124664306640625
+      ],
+      "rotation": [
+        0.44492584466934204,
+        -0.5544617176055908,
+        0.24595238268375397
+      ],
+      "width": 0.23,
+      "height": 0.23,
+      "price": 450,
+      "meshName": "body-under-top",
+      "projection": true
+    },
+    {
+      "id": "upper-back",
+      "name": "Upper back",
+      "position": [
+        0,
+        2.119999885559082,
+        -0.3337388038635254
+      ],
+      "rotation": [
+        -0.0788937658071518,
+        3.141592502593994,
+        0
+      ],
+      "width": 0.45,
+      "height": 0.32,
+      "price": 350,
+      "meshName": "body-under-top",
+      "projection": true
+    },
+    {
+      "id": "leg-front",
+      "name": "Left leg / front",
+      "position": [
+        0.20000000298023224,
+        1.2999999523162842,
+        -0.02180004119873047
+      ],
+      "rotation": [
+        -0.018514564260840416,
+        0.011176932603120804,
+        0.00020695537386927754
+      ],
+      "width": 0.21,
+      "height": 0.23,
+      "price": 200,
+      "meshName": "jeans",
+      "projection": true
+    }
+  ],
+  "license": "CC0-1.0"
+}

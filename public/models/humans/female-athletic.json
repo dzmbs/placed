@@ -1,0 +1,80 @@
+{
+  "reviewed": true,
+  "source": "MakeHuman CC0 / local Blender",
+  "body": "female-shared-body.glb",
+  "outfits": [
+    "female-casual-outfit.glb",
+    "female-athletic-outfit.glb",
+    "female-gown-outfit.glb"
+  ],
+  "hiddenBodyMeshes": [
+    "female-skin-3",
+    "female-skin-7",
+    "female-under-shoes"
+  ],
+  "hiddenOutfitMeshes": [
+    "female-shirt",
+    "female-jeans",
+    "female-dress"
+  ],
+  "spots": [
+    {
+      "id": "shirt-front",
+      "name": "Shirt / front",
+      "position": [
+        0,
+        2.1500000953674316,
+        0.09470844268798828
+      ],
+      "rotation": [
+        -0.580919086933136,
+        0.06584542244672775,
+        0.0431683249771595
+      ],
+      "width": 0.34,
+      "height": 0.2,
+      "price": 450,
+      "meshName": "female-sport-top",
+      "projection": true
+    },
+    {
+      "id": "shirt-back",
+      "name": "Shirt / back",
+      "position": [
+        0,
+        2.180000066757202,
+        -0.26010656356811523
+      ],
+      "rotation": [
+        -0.05449168011546135,
+        -3.1004765033721924,
+        -0.0022420743480324745
+      ],
+      "width": 0.34,
+      "height": 0.2,
+      "price": 350,
+      "meshName": "female-sport-top",
+      "projection": true
+    },
+    {
+      "id": "leg-front",
+      "name": "Left leg / front",
+      "position": [
+        0.1899999976158142,
+        1.2799999713897705,
+        0.0732579231262207
+      ],
+      "rotation": [
+        -0.019887754693627357,
+        -0.07367312908172607,
+        -0.001464060042053461
+      ],
+      "width": 0.2,
+      "height": 0.23,
+      "price": 200,
+      "meshName": "female-leggings",
+      "projection": true
+    }
+  ],
+  "license": "CC0-1.0"
+}

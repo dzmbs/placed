@@ -10,6 +10,11 @@ __pycache__/
 *.py[cod]
 *.blend[0-9]*
 data/
+/reference/
+/contracts/lib/
+/contracts/out/
+/contracts/cache/
+/contracts/broadcast/
 public/uploads/
 assets/reference/
 assets/humans/*-source.glb

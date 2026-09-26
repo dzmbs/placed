@@ -1,6 +1,8 @@
 /node_modules/
 /.next/
 /data/
+/reference/
+/contracts/
 /assets/
 /public/
 /package-lock.json

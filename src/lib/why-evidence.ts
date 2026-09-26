@@ -1,10 +1,12 @@
-// Research snapshot: 27 September 2026. Keep source currencies and evidence labels.
+// Research snapshot: 27 September 2026. Preserve original amounts in conversion notes.
 // A website counter or creator statement is not an independent payment audit.
 export type SaleEvidence = {
   id: string;
   creator: string;
   surface: string;
   amount: string;
+  amountNote?: string;
+  exchangeRateSource?: string;
   basis: string;
   timing: string;
   timingNote: string;
@@ -35,6 +37,8 @@ export const sales: SaleEvidence[] = [
       'https://solanacompass.com/news/solana-sells-nine-logo-zones-for-nepal-flood-relief-raising-166k-in-usdc',
     resultLabel: 'Recap',
     screenshot: '/evidence/solana-nepal.png',
+    featuredImage: '/evidence/solana-nepal-supplied.png',
+    featuredImageAlt: 'Sponsor placements on the Solana profile picture for the Nepal Relief Fund.',
   },
   {
     id: 'marc',
@@ -162,7 +166,9 @@ export const sales: SaleEvidence[] = [
     id: 'bonnie',
     creator: 'Bonnie Blue',
     surface: 'Newborn naming rights / “BetBolt”',
-    amount: '£1.2 million',
+    amount: '$1.59 million',
+    amountNote: 'Approximate USD equivalent of £1.2 million at 1 GBP = 1.3246 USD on 25 Sep 2026.',
+    exchangeRateSource: 'https://www.exchangerates.org.uk/historical/GBP/25_09_2026',
     basis: 'Unverified winning-bid claim',
     timing: 'Duration not established',
     timingNote:

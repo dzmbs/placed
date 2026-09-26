@@ -12,6 +12,9 @@
   flex-wrap: wrap;
 }
 .wordmark {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   font-size: 30px;
   font-weight: 750;
   letter-spacing: -1px;

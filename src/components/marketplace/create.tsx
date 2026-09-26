@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import type { Draft, Spot, Vec3, GenerationJob } from '@/lib/types';
 import { initialDraft, safeDraft } from '@/lib/studio';
 import { restoreMarketplaceDraft } from '@/lib/marketplace/drafts';
+import { browserDrafts, STUDIO_DRAFT_KEY } from '@/lib/browser-drafts';
 import {
   api,
   storeMetadata,
@@ -335,11 +336,9 @@ export default function CreateAsset() {
               />
             </label>
             <button
-              onClick={() => {
+              onClick={async () => {
                 try {
-                  const saved = safeDraft(
-                    JSON.parse(localStorage.getItem('placed-studio-draft-v1') || 'null'),
-                  );
+                  const saved = safeDraft(await browserDrafts.read(STUDIO_DRAFT_KEY));
                   if (!saved) throw new Error('Open the studio and save a model first.');
                   setDraft(saved);
                   setSelected(saved.spots[0]?.id || null);

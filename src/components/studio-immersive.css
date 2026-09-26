@@ -221,8 +221,18 @@
 .studio-app .workspace .button.secondary:hover {
   background: #c0d59f24;
 }
+.studio-app .human-genders {
+  background: #101c15;
+  border: 1px solid var(--glass-line);
+}
+.studio-app .human-genders button:hover:not(:disabled):not(.active) {
+  background: #2c3f2e;
+}
 .studio-app .human-genders button.active {
-  background: #b4d48736;
+  background: #c8dea4;
+  color: #24351e;
+  font-weight: 600;
+  box-shadow: none;
 }
 .studio-app .human-outfits button {
   min-height: 44px;

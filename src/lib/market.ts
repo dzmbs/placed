@@ -97,6 +97,7 @@ export type Financing = {
 };
 export type Receipt = { id: string; at: number; user: string; title: string };
 export type MarketState = {
+  unavailableListingCount?: number;
   network?: 'supported' | 'unsupported';
   networkName?: string;
   now: number;

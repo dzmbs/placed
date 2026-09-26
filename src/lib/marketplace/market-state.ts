@@ -15,6 +15,28 @@ export function uiPrice(raw: string) {
 }
 const identity = (address: string) => address.toLowerCase();
 export function mapMarketState(snapshot: MarketSnapshot): MarketState {
+  // Public browsing can show the readable listings without fabricating missing details.
+  // Wallet views still require the complete snapshot so balances and positions stay intact.
+  if (!snapshot.wallet) {
+    const unavailable = snapshot.assets.filter(
+      (asset) => !asset.metadata || asset.slots.some((slot) => !slot.metadata),
+    );
+    if (unavailable.length) {
+      const unavailableSlots = new Set(
+        unavailable.flatMap((asset) => asset.slots.map((slot) => slot.id)),
+      );
+      return {
+        ...mapMarketState({
+          ...snapshot,
+          assets: snapshot.assets.filter((asset) => !unavailable.includes(asset)),
+          campaigns: snapshot.campaigns.filter(
+            (campaign) => !unavailableSlots.has(campaign.slotId),
+          ),
+        }),
+        unavailableListingCount: unavailable.length,
+      };
+    }
+  }
   const current = snapshot.wallet ? identity(snapshot.wallet.address) : null;
   const people = new Map<string, Person>();
   function person(address: string) {

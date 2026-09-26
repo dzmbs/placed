@@ -7,6 +7,7 @@ import type { WalletConnection } from './providers';
 import * as client from '@/lib/marketplace/client';
 import type { ParticipantAuthorization } from '@/lib/marketplace/domain';
 import styles from './marketplace.module.css';
+import BrandMark from '../brand-mark';
 
 interface WalletState {
   usdc: string;
@@ -200,6 +201,7 @@ export function MarketplaceProvider({
           <>
             <header className={styles.header}>
               <Link className={styles.wordmark} href="/marketplace">
+                <BrandMark />
                 placed<span> / Sepolia</span>
               </Link>
               <nav>

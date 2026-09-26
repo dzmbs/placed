@@ -6,6 +6,7 @@ import dynamic from 'next/dynamic';
 import { safeDraft } from '@/lib/studio';
 import type { Draft } from '@/lib/types';
 import { PENDING_KEY } from '@/lib/market';
+import { browserDrafts } from '@/lib/browser-drafts';
 import { useMarket } from './market-provider';
 import {
   AccessButton,
@@ -26,20 +27,44 @@ export default function MarketPublish() {
     router = useRouter(),
     [draft, setDraft] = useState<Draft | null>(null),
     [loaded, setLoaded] = useState(false),
+    [loadError, setLoadError] = useState(false),
     [name, setName] = useState(''),
     [description, setDescription] = useState('');
   useEffect(() => {
-    try {
-      const d = safeDraft(JSON.parse(localStorage.getItem(PENDING_KEY) ?? 'null'));
-      if (d) {
-        setDraft(d);
-        setName(d.assetName || d.campaign.title);
-        setDescription(d.campaign.deliverables);
-      }
-    } catch {}
-    setLoaded(true);
+    let stopped = false;
+    browserDrafts
+      .read(PENDING_KEY)
+      .then((value) => {
+        if (stopped) return;
+        const d = safeDraft(value);
+        if (d) {
+          setDraft(d);
+          setName(d.assetName || d.campaign.title);
+          setDescription(d.campaign.deliverables);
+        }
+      })
+      .catch(() => {
+        if (!stopped) setLoadError(true);
+      })
+      .finally(() => {
+        if (!stopped) setLoaded(true);
+      });
+    return () => {
+      stopped = true;
+    };
   }, []);
   if (!loaded) return <Loading />;
+  if (loadError)
+    return (
+      <MarketShell>
+        <Empty
+          title="Your campaign could not be opened"
+          text="Your saved draft has been kept. Return to Studio and try again."
+          href="/studio"
+          action="Back to Studio"
+        />
+      </MarketShell>
+    );
   if (!state) return <MarketUnavailable />;
   if (!draft)
     return (

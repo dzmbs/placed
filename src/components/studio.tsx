@@ -2,7 +2,15 @@
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { PENDING_KEY } from '@/lib/market';
+import {
+  browserDrafts,
+  draftStorageMessage,
+  STUDIO_DRAFT_KEY,
+  STUDIO_CANVASES_KEY,
+  STUDIO_LISTINGS_KEY,
+} from '@/lib/browser-drafts';
 import { MarketNav } from './market-ui';
+import BrandMark from './brand-mark';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ArrowDownToLine,
@@ -63,9 +71,6 @@ const Viewer = dynamic(() => import('./viewer'), {
     </div>
   ),
 });
-const STORAGE_KEY = 'placed-studio-draft-v1';
-const LISTINGS_KEY = 'placed-studio-listings-v1';
-const CANVASES_KEY = 'placed-studio-canvases-v1';
 type Modal = 'import' | 'campaign' | 'publish' | 'gallery' | 'models' | 'help' | null;
 const icons = {
   suitcase: Luggage,
@@ -79,15 +84,6 @@ const icons = {
   custom: Box,
 };
 
-function Mark() {
-  return (
-    <span className="brand-mark">
-      <span />
-      <span />
-      <span />
-    </span>
-  );
-}
 function Thumbnail({ kind }: { kind: AssetKind }) {
   if (kind === 'suitcase')
     return (
@@ -603,6 +599,9 @@ export default function Studio() {
   const [exportNonce, setExportNonce] = useState(0);
   const [ready, setReady] = useState(false);
   const [saved, setSaved] = useState(true);
+  const [saveError, setSaveError] = useState(false);
+  const [loadError, setLoadError] = useState(false);
+  const [publishing, setPublishing] = useState(false);
   const [toast, setToast] = useState('');
   const [listings, setListings] = useState<Draft[]>([]);
   const [activeTab, setActiveTab] = useState<'spot' | 'all'>('spot');
@@ -641,53 +640,70 @@ export default function Studio() {
       : []),
   ];
   const saveCanvas = useCallback(
-    (value: Draft) => {
+    async (value: Draft) => {
       canvases.current = rememberCanvas(canvases.current, value);
       try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(value));
-        localStorage.setItem(CANVASES_KEY, JSON.stringify(canvases.current));
+        await browserDrafts.write([
+          [STUDIO_DRAFT_KEY, value],
+          [STUDIO_CANVASES_KEY, canvases.current],
+        ]);
+        setSaveError(false);
         return true;
-      } catch {
-        notify('Browser storage is full. Export your campaign to keep a copy.');
+      } catch (error) {
+        setSaveError(true);
+        notify(draftStorageMessage(error));
         return false;
       }
     },
     [notify],
   );
   useEffect(() => {
-    try {
-      canvases.current = safeCanvasDrafts(JSON.parse(localStorage.getItem(CANVASES_KEY) ?? '{}'));
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) {
-        const restored = safeDraft(JSON.parse(raw));
+    let stopped = false;
+    async function restore() {
+      try {
+        const [archive, raw, savedListings] = await Promise.all([
+          browserDrafts.read(STUDIO_CANVASES_KEY),
+          browserDrafts.read(STUDIO_DRAFT_KEY),
+          browserDrafts.read(STUDIO_LISTINGS_KEY),
+        ]);
+        if (stopped) return;
+        canvases.current = safeCanvasDrafts(archive);
+        const restored = safeDraft(raw);
         if (restored) {
           setDraft(restored);
           setSelectedId(restored.spots[0]?.id ?? null);
         }
+        if (Array.isArray(savedListings))
+          setListings(savedListings.map(safeDraft).filter((d): d is Draft => d !== null));
+        setReady(true);
+      } catch {
+        if (!stopped) setLoadError(true);
       }
-      const savedListings = JSON.parse(localStorage.getItem(LISTINGS_KEY) ?? '[]');
-      if (Array.isArray(savedListings))
-        setListings(savedListings.map(safeDraft).filter((d): d is Draft => d !== null));
-    } catch {
-      notify('Your saved draft could not be opened. A fresh canvas is ready.');
     }
-    setReady(true);
+    void restore();
     return () => {
+      stopped = true;
       if (toastTimer.current) clearTimeout(toastTimer.current);
     };
-  }, [notify]);
+  }, []);
   useEffect(() => {
     if (!ready) return;
     setSaved(false);
+    let current = true;
     const timeout = setTimeout(() => {
-      if (saveCanvas(draft)) setSaved(true);
+      void saveCanvas(draft).then((success) => {
+        if (current && success) setSaved(true);
+      });
     }, 500);
-    return () => clearTimeout(timeout);
+    return () => {
+      current = false;
+      clearTimeout(timeout);
+    };
   }, [draft, ready, saveCanvas]);
   useEffect(() => {
     if (!ready) return;
     const flush = () => {
-      saveCanvas(currentDraft.current);
+      void saveCanvas(currentDraft.current);
     };
     const hidden = () => {
       if (document.visibilityState === 'hidden') flush();
@@ -695,6 +711,7 @@ export default function Studio() {
     window.addEventListener('pagehide', flush);
     document.addEventListener('visibilitychange', hidden);
     return () => {
+      flush();
       window.removeEventListener('pagehide', flush);
       document.removeEventListener('visibilitychange', hidden);
     };
@@ -821,20 +838,28 @@ export default function Studio() {
     };
     reader.readAsDataURL(file);
   }
-  function publish() {
-    if (campaignErrors.length) return;
+  async function publish() {
+    if (campaignErrors.length || publishing || !ready) return;
+    setPublishing(true);
     const next = [structuredClone(draft), ...listings].slice(0, 12);
     try {
-      localStorage.setItem(LISTINGS_KEY, JSON.stringify(next));
-      localStorage.setItem(PENDING_KEY, JSON.stringify(draft));
-      setListings(next);
-      setModal(null);
-      setMode('preview');
-      camera('iso');
-      router.push('/publish');
-    } catch {
-      notify('Browser storage is full. Export your campaign to keep a copy.');
+      // Commit the current canvas, gallery and publish handoff together.
+      await browserDrafts.write([
+        [STUDIO_DRAFT_KEY, draft],
+        [STUDIO_CANVASES_KEY, rememberCanvas(canvases.current, draft)],
+        [STUDIO_LISTINGS_KEY, next],
+        [PENDING_KEY, draft],
+      ]);
+    } catch (error) {
+      setPublishing(false);
+      notify(draftStorageMessage(error));
+      return;
     }
+    setListings(next);
+    setModal(null);
+    setMode('preview');
+    camera('iso');
+    router.push('/publish');
   }
   function loadListing(listing: Draft) {
     saveCanvas(draft);
@@ -856,13 +881,44 @@ export default function Studio() {
     setModal(null);
     camera('iso');
   }
+  if (!ready)
+    return (
+      <main className="app studio-app">
+        <MarketNav />
+        <div className="viewer-loading" role="status">
+          {loadError ? (
+            <div>
+              <p>
+                Your saved draft could not be opened. Retry before editing to keep your saved work
+                intact.
+              </p>
+              <button className="button secondary" onClick={() => window.location.reload()}>
+                Retry
+              </button>
+            </div>
+          ) : (
+            'Restoring your canvas…'
+          )}
+        </div>
+      </main>
+    );
   return (
     <main className={`app studio-app ${expanded ? 'studio-fullscreen' : ''}`}>
       <MarketNav />
       <div className="studio-toolbar">
         <span className="save-status">
-          {saved ? <CheckCheck size={15} /> : <LoaderCircle size={15} className="spin" />}
-          {saved ? 'Draft saved locally' : 'Saving…'}
+          {saveError ? (
+            <CircleHelp size={15} />
+          ) : saved ? (
+            <CheckCheck size={15} />
+          ) : (
+            <LoaderCircle size={15} className="spin" />
+          )}
+          {saveError
+            ? 'Draft not saved — export a copy'
+            : saved
+              ? 'Draft saved locally'
+              : 'Saving…'}
         </span>
         <button
           className="icon-button"
@@ -1546,7 +1602,7 @@ export default function Studio() {
         >
           <div className="publish-summary">
             <span className="publish-symbol">
-              <Mark />
+              <BrandMark />
             </span>
             <h3>{draft.campaign.title}</h3>
             <p>{draft.campaign.event}</p>
@@ -1576,11 +1632,11 @@ export default function Studio() {
           )}
           <button
             className="button primary full"
-            disabled={campaignErrors.length > 0}
+            disabled={campaignErrors.length > 0 || publishing}
             onClick={publish}
           >
-            Continue to marketplace
-            <ArrowUpRight size={16} />
+            {publishing ? 'Saving your campaign…' : 'Continue to marketplace'}
+            {publishing ? <LoaderCircle size={16} className="spin" /> : <ArrowUpRight size={16} />}
           </button>
         </ModalShell>
       )}

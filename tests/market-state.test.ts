@@ -106,6 +106,36 @@ test('published slots do not require financing or invent bids, prices or balance
   assert.equal(state.credits[owner], 300_000_000);
 });
 
+test('public browsing isolates unavailable metadata and recovers when details return', () => {
+  const snapshot = fixture();
+  snapshot.wallet = undefined;
+  const readable = snapshot.assets[0];
+  snapshot.assets.push({ ...readable, id: '2', metadata: undefined, slots: [] });
+  let state = mapMarketState(snapshot);
+  assert.deepEqual(
+    state.assets.map((asset) => asset.id),
+    ['1'],
+  );
+  assert.equal(state.unavailableListingCount, 1);
+  const metadata = readable.slots[0].metadata;
+  readable.slots[0].metadata = undefined;
+  state = mapMarketState(snapshot);
+  assert.deepEqual(state.assets, []);
+  assert.deepEqual(state.campaigns, []);
+  assert.equal(state.unavailableListingCount, 2);
+  readable.slots[0].metadata = metadata;
+  snapshot.assets.pop();
+  state = mapMarketState(snapshot);
+  assert.equal(state.assets.length, 1);
+  assert.equal(state.unavailableListingCount, undefined);
+});
+
+test('wallet snapshots still reject missing metadata instead of hiding positions', () => {
+  const snapshot = financed();
+  snapshot.assets[0].metadata = undefined;
+  assert.throws(() => mapMarketState(snapshot), /metadata is unavailable/);
+});
+
 test('campaigns resolve their parent slot and retain their original payment terms', () => {
   const snapshot = financed();
   snapshot.campaigns = ['1', '2'].map((slotId, index) => ({
@@ -168,6 +198,12 @@ test('campaigns resolve their parent slot and retain their original payment term
   assert.equal(c.upfront, c.creatorPaid + c.vaultPaid);
   assert.deepEqual(state.assets[0].financing?.contributions, { '2': 200_000_000 });
   assert.equal(redemptionReady(state, state.assets[0]), false);
+  snapshot.wallet = undefined;
+  snapshot.assets[0].metadata = undefined;
+  const publicView = mapMarketState(snapshot);
+  assert.deepEqual(publicView.assets, []);
+  assert.deepEqual(publicView.campaigns, []);
+  assert.equal(publicView.unavailableListingCount, 1);
 });
 
 test('one asset supply backs all slots and redemption observes the aggregate completion gate', () => {

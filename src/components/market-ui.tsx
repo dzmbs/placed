@@ -5,6 +5,7 @@ import { ArrowRight, LoaderCircle, Wallet } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { display } from '@/lib/market';
 import { useMarket } from './market-provider';
+import BrandMark from './brand-mark';
 
 export function MarketNav() {
   const path = usePathname();
@@ -12,11 +13,7 @@ export function MarketNav() {
     <header className="mp-header">
       <div className="mp-nav">
         <Link className="wordmark" href="/" aria-label="Placed home">
-          <span className="brand-mark">
-            <span />
-            <span />
-            <span />
-          </span>
+          <BrandMark />
           placed
         </Link>
         <nav aria-label="Marketplace navigation">

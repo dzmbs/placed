@@ -10,9 +10,16 @@ import {
   ScanLine,
   ShieldCheck,
   SquareDashedMousePointer,
-  BarChart3,
-  Layers3,
   Wallet,
+  ChartNoAxesCombined,
+  Columns3,
+  Workflow,
+  Repeat2,
+  Sparkles,
+  Megaphone,
+  Coins,
+  ArrowLeftRight,
+  type LucideIcon,
 } from 'lucide-react';
 import { sales, type SaleEvidence } from '@/lib/why-evidence';
 import { EvidenceCarousel } from '@/components/evidence-carousel';
@@ -46,6 +53,11 @@ function SourceLinks({ sale }: { sale: SaleEvidence }) {
       {sale.screenshot && (
         <a href={sale.screenshot} target="_blank" rel="noreferrer">
           Source screenshot <ArrowUpRight size={12} />
+        </a>
+      )}
+      {sale.exchangeRateSource && (
+        <a href={sale.exchangeRateSource} target="_blank" rel="noreferrer">
+          Exchange rate <ArrowUpRight size={12} />
         </a>
       )}
     </div>
@@ -94,27 +106,139 @@ const featuredCases = [
 const steps = [
   {
     icon: Box,
-    title: 'Choose your space',
-    description: 'Choose a 3D model or import your own to show brands where their ad will appear.',
+    title: 'List your space',
+    description: 'Upload photos of a space you control. Choose a 3D model or import your own.',
   },
   {
     icon: SquareDashedMousePointer,
     title: 'Set the campaign',
-    description: 'Mark ad placements, name your slots and choose display dates.',
+    description: 'Define ad slots on your 3D model, set display dates and open your auction.',
   },
   {
     icon: Wallet,
     title: 'Accept bids',
     description:
-      'Brands bid in USDC. The highest funded bid wins; outbid brands can withdraw their funds.',
+      'Brands discover your space, preview their artwork in 3D and bid in USDC. The highest funded bid wins.',
   },
   {
     icon: ScanLine,
     title: 'Submit proof',
     description:
-      'Display the winning artwork and submit a photo. Approved proof releases the remaining payment.',
+      'Display the winning artwork and upload a photo for AI image verification. Approved proof releases the remaining payment.',
   },
 ];
+
+const paymentFeatures = [
+  {
+    icon: ShieldCheck,
+    title: 'Verified participants',
+    description:
+      'World verifies that space owners and advertisers are human before they publish or bid.',
+  },
+  {
+    icon: Globe2,
+    title: 'Named spaces',
+    description:
+      'ENS gives each asset and placement a name. Winning brands control their campaign artwork.',
+  },
+  {
+    icon: Wallet,
+    title: 'Protected payments',
+    description:
+      'Part of the winning bid stays in USDC escrow until proof is approved. Outbid brands can withdraw their funds.',
+  },
+];
+
+const financingSteps = [
+  {
+    icon: ChartNoAxesCombined,
+    title: 'Launch a token sale',
+    description:
+      'Choose a revenue share and term. A Uniswap continuous clearing auction sets the token price and allocation.',
+  },
+  {
+    icon: ArrowLeftRight,
+    title: 'Trade revenue shares',
+    description:
+      'Investors can buy and sell revenue-share tokens on Uniswap v4 after the initial sale.',
+  },
+  {
+    icon: Coins,
+    title: 'Share campaign income',
+    description:
+      'Advertising receipts are split between the owner and token holders. Investors redeem after the term ends and campaigns settle.',
+  },
+];
+
+const valueProps = [
+  {
+    icon: Globe2,
+    title: 'Global discovery',
+    description: 'Connect space owners with brands beyond their existing networks.',
+  },
+  {
+    icon: ChartNoAxesCombined,
+    title: 'Price discovery',
+    description: 'Open auctions help owners discover what advertisers will pay.',
+  },
+  {
+    icon: Columns3,
+    title: 'Easy comparison',
+    description: 'Shared listings make placements, prices and campaign terms easier to compare.',
+  },
+  {
+    icon: Workflow,
+    title: 'Simpler campaigns',
+    description: 'Connect booking, artwork, delivery evidence and payment in one workflow.',
+  },
+  {
+    icon: Repeat2,
+    title: 'Less coordination',
+    description: 'Make smaller sponsorships easier to arrange and repeat.',
+  },
+  {
+    icon: Sparkles,
+    title: 'New creator income',
+    description: 'Turn everyday surfaces into earning opportunities.',
+  },
+  {
+    icon: Megaphone,
+    title: 'Distinctive brand exposure',
+    description: 'Help brands find novel ways to get noticed by relevant audiences.',
+  },
+  {
+    icon: Coins,
+    title: 'Access to sponsorship revenue',
+    description: 'Let investors buy and trade defined shares of future advertising income.',
+  },
+];
+
+function FeatureGrid({
+  items,
+  columns = 3,
+  numbered = false,
+}: {
+  items: { icon: LucideIcon; title: string; description: string }[];
+  columns?: 3 | 4;
+  numbered?: boolean;
+}) {
+  return (
+    <div className={`why-feature-grid why-feature-grid-${columns}`}>
+      {items.map((item, index) => (
+        <article className="why-feature-card" key={item.title}>
+          <div className="why-feature-top">
+            <span className="why-feature-icon">
+              <item.icon size={21} strokeWidth={1.6} aria-hidden="true" />
+            </span>
+            {numbered && <span className="why-feature-number">0{index + 1}</span>}
+          </div>
+          <h3>{item.title}</h3>
+          <p>{item.description}</p>
+        </article>
+      ))}
+    </div>
+  );
+}
 
 export default function WhyPage() {
   return (
@@ -123,21 +247,6 @@ export default function WhyPage() {
 
       <main>
         <HeroShowcase />
-
-        <nav className="why-chapters" aria-label="Page sections">
-          <a href="#evidence">
-            <BarChart3 size={17} />
-            <span>01</span> The evidence
-          </a>
-          <a href="#how-it-works">
-            <Layers3 size={17} />
-            <span>02</span> The product
-          </a>
-          <a href="#onchain">
-            <Globe2 size={17} />
-            <span>03</span> Why onchain
-          </a>
-        </nav>
 
         <section className="why-section" id="evidence" aria-labelledby="evidence-title">
           <div className="why-section-heading">
@@ -159,22 +268,14 @@ export default function WhyPage() {
                   <span>CASE / 0{index + 1}</span>
                   <span>{category}</span>
                 </div>
-                <div className="why-amount">{sale.amount}</div>
-                <div className="why-timing">{sale.timing}</div>
+                <div className="why-amount" title={sale.amountNote}>
+                  {sale.amount}
+                </div>
                 <h3>{sale.creator}</h3>
                 <p className="why-surface">{sale.surface}</p>
-                <div className="why-card-bottom">
-                  <span className="why-basis">{sale.basis}</span>
-                  {sale.featuredNote && <p className="why-featured-note">{sale.featuredNote}</p>}
-                  <SourceLinks sale={sale} />
-                </div>
               </article>
             ))}
           </EvidenceCarousel>
-          <p className="why-evidence-caption">
-            Independent campaigns, checked 27 Sep 2026. Amounts include reported payments,
-            commitments and bids; they are not typical earnings or Placed transactions.
-          </p>
 
           <details className="why-research" id="all-campaigns">
             <summary>
@@ -185,7 +286,7 @@ export default function WhyPage() {
             </summary>
             <div className="why-research-intro">
               Timelines refer to sales, not ad display periods. Unknown durations are marked.
-              Amounts use their original currencies.
+              Original currencies are used unless an approximate USD conversion is noted.
             </div>
             <div className="why-research-grid">
               {sales.map((sale) => (
@@ -215,6 +316,7 @@ export default function WhyPage() {
                     </div>
                     <p>{sale.timingNote}</p>
                     <p>{sale.note}</p>
+                    {sale.amountNote && <p>{sale.amountNote}</p>}
                     <SourceLinks sale={sale} />
                   </div>
                 </details>
@@ -223,101 +325,63 @@ export default function WhyPage() {
           </details>
         </section>
 
-        <section className="why-section" id="how-it-works" aria-labelledby="product-title">
-          <div className="why-section-heading">
+        <section
+          className="why-section why-explainer"
+          id="how-it-works"
+          aria-labelledby="product-title"
+        >
+          <div className="why-section-heading why-explainer-heading">
             <div>
               <div className="why-kicker">How it works</div>
-              <h2 id="product-title">How a campaign works</h2>
+              <h2 id="product-title">From your space to their next campaign.</h2>
             </div>
           </div>
-          <div className="why-steps">
-            {steps.map((step, index) => (
-              <article key={step.title}>
-                <div className="why-step-head">
-                  <step.icon size={23} strokeWidth={1.5} />
-                  <span>0{index + 1}</span>
-                </div>
-                <h3>{step.title}</h3>
-                <p>{step.description}</p>
-              </article>
-            ))}
-          </div>
-          <p className="why-product-note">
+          <FeatureGrid items={steps} columns={4} numbered />
+          <p className="why-section-note">
             Each placement can host its own brand. Run another campaign after the previous one
             settles.
           </p>
         </section>
 
-        <section className="why-section why-onchain" id="onchain" aria-labelledby="onchain-title">
-          <div className="why-section-heading">
+        <section className="why-section why-explainer" id="onchain" aria-labelledby="onchain-title">
+          <div className="why-section-heading why-explainer-heading">
             <div>
               <div className="why-kicker">Payments and ownership</div>
-              <h2 id="onchain-title">How bids and payments are handled</h2>
+              <h2 id="onchain-title">Clear terms. Connected payments.</h2>
             </div>
           </div>
-          <div className="why-protocols">
-            <article>
-              <ShieldCheck size={21} />
-              <h3>World</h3>
-              <p>Verify you are human before publishing or bidding.</p>
-            </article>
-            <article>
-              <Globe2 size={21} />
-              <h3>ENS</h3>
-              <p>
-                Each asset and placement has a name. The winning brand controls its campaign
-                artwork.
-              </p>
-            </article>
-            <article>
-              <Wallet size={21} />
-              <h3>USDC escrow</h3>
-              <p>
-                Outbid brands can withdraw their funds. Part of the winning payment stays in escrow
-                until proof is approved or an administrator issues a refund.
-              </p>
-            </article>
-          </div>
-          <div className="why-financing">
-            <div className="why-financing-copy">
-              <span className="why-financing-tag">Optional financing</span>
-              <h3>Sell a share of future ad revenue.</h3>
-              <p>
-                Creators choose a percentage and a term. Token holders receive that share of
-                eligible advertising receipts from the asset’s placements. Returns are not
-                guaranteed.
-              </p>
+          <FeatureGrid items={paymentFeatures} />
+          <p className="why-section-note">
+            Photo verification checks artwork and placement, not continuous exposure. Refunds
+            require an administrator’s review.
+          </p>
+        </section>
+
+        <section className="why-section why-explainer" aria-labelledby="financing-title">
+          <div className="why-section-heading why-explainer-heading">
+            <div>
+              <div className="why-kicker">Optional financing</div>
+              <h2 id="financing-title">Sell a share of future ad revenue.</h2>
             </div>
-            <ol className="why-financing-flow">
-              <li>
-                <span>01</span>
-                <div>
-                  <strong>Launch a token sale</strong>
-                  <p>A continuous clearing auction sets the token price and allocation.</p>
-                </div>
-              </li>
-              <li>
-                <span>02</span>
-                <div>
-                  <strong>Trade on Uniswap v4</strong>
-                  <p>Buy or sell revenue tokens after the sale.</p>
-                </div>
-              </li>
-              <li>
-                <span>03</span>
-                <div>
-                  <strong>Redeem revenue</strong>
-                  <p>Redeem your share after the term ends and its campaigns settle.</p>
-                </div>
-              </li>
-            </ol>
           </div>
-          <div className="why-boundaries">
-            <p>
-              Photo verification checks artwork and placement, not continuous exposure. Refunds
-              require an administrator’s review.
-            </p>
+          <FeatureGrid items={financingSteps} numbered />
+          <p className="why-section-note">
+            Owners define the percentage and term. Token holders share eligible advertising
+            receipts; returns are not guaranteed.
+          </p>
+        </section>
+
+        <section
+          className="why-section why-explainer why-value-section"
+          aria-labelledby="value-title"
+        >
+          <div className="why-section-heading why-explainer-heading">
+            <div>
+              <div className="why-kicker">Why Placed</div>
+              <h2 id="value-title">More possibilities for every space.</h2>
+            </div>
           </div>
+          <FeatureGrid items={valueProps} columns={4} />
         </section>
 
         <div className="why-actions">

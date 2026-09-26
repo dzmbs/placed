@@ -3,8 +3,8 @@
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { Component, useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
-import { ArrowDown, ArrowRight, ArrowUpRight } from 'lucide-react';
-import { heroSpaces } from '@/lib/hero-spaces';
+import { ArrowRight, ArrowUpRight, BarChart3, Layers3, Pause, Play } from 'lucide-react';
+import { heroSpaces, type ProjectPlacement } from '@/lib/hero-spaces';
 
 const Scene = dynamic(() => import('./hero-showcase-scene'), {
   ssr: false,
@@ -45,22 +45,37 @@ class SceneBoundary extends Component<
 
 export default function HeroShowcase() {
   const [index, setIndex] = useState(0);
-  const [slide, setSlide] = useState<{ current: number; previous: number | null }>({
-    current: 0,
-    previous: null,
-  });
+  const [activeIndex, setActiveIndex] = useState(0);
   const [sceneReady, setSceneReady] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(true);
   const [visible, setVisible] = useState(false);
   const [pageVisible, setPageVisible] = useState(true);
   const [failed, setFailed] = useState(false);
+  const [paused, setPaused] = useState(false);
   const root = useRef<HTMLElement>(null);
-  const playing = !reducedMotion && visible && pageVisible && !failed;
+  const annotationNodes = useRef<
+    Record<
+      string,
+      {
+        box?: SVGPolygonElement | null;
+        line?: SVGPolylineElement | null;
+      }
+    >
+  >({});
+  const projectPlacement = useCallback<ProjectPlacement>((modelIndex, id, corners) => {
+    const nodes = annotationNodes.current[`${modelIndex}-${id}`];
+    if (!nodes) return;
+    nodes.box?.setAttribute('points', corners.map((point) => point.join(',')).join(' '));
+    const placement = heroSpaces[modelIndex].placements.find((item) => item.id === id)!;
+    const x = corners.reduce((sum, point) => sum + point[0], 0) / corners.length;
+    const y = corners.reduce((sum, point) => sum + point[1], 0) / corners.length;
+    const endX = placement.label.side === 'left' ? 20 : 80;
+    nodes.line?.setAttribute('points', `${x},${y} ${endX},${placement.label.top + 8}`);
+  }, []);
+  const playing = !reducedMotion && visible && pageVisible && !failed && !paused;
   const modelReady = useCallback((next: number) => {
     setSceneReady(true);
-    setSlide((current) =>
-      current.current === next ? current : { current: next, previous: current.current },
-    );
+    setActiveIndex(next);
   }, []);
 
   useEffect(() => {
@@ -81,35 +96,31 @@ export default function HeroShowcase() {
   }, []);
 
   useEffect(() => {
-    if (!playing || !sceneReady || index !== slide.current) return;
+    if (!playing || !sceneReady || index !== activeIndex) return;
     const timer = window.setTimeout(
       () => setIndex((current) => (current + 1) % heroSpaces.length),
-      4200,
+      6000,
     );
     return () => window.clearTimeout(timer);
-  }, [playing, sceneReady, index, slide.current]);
+  }, [playing, sceneReady, index, activeIndex]);
 
   return (
     <header ref={root} className="why-hero why-hero-interactive">
       <div className="why-hero-copy">
-        <h1 aria-label="Your next ad space. An outfit, a creator, a carry-on, a billboard, a bicycle, a livestream.">
+        <h1 aria-label="Your space. Someone’s next ad">
           <span className="why-headline-rest" aria-hidden="true">
-            Your next
-            <br />
-            ad space.
+            Your space.
           </span>
-          <span className="why-rotating-line" aria-hidden="true">
-            <span className="why-word-transition" key={slide.current}>
-              {slide.previous !== null && (
-                <span className="why-word-out">{heroSpaces[slide.previous].phrase}</span>
-              )}
-              <span className={slide.previous === null ? 'why-word-current' : 'why-word-in'}>
-                {heroSpaces[slide.current].phrase}
-              </span>
-            </span>
+          <span className="why-headline-accent" aria-hidden="true">
+            Someone’s
+            <br />
+            next ad
           </span>
         </h1>
-        <p>Put brands where people already look.</p>
+        <p>
+          List your advertising space. Brands book it directly. Investors buy a share of the
+          revenue.
+        </p>
         <div className="why-hero-cta">
           <Link className="why-button" href="/explore">
             Find ad space <ArrowRight size={18} />
@@ -118,21 +129,26 @@ export default function HeroShowcase() {
             List your space <ArrowUpRight size={17} />
           </Link>
         </div>
-        <a className="why-hero-footnote" href="#how-it-works">
-          Pick a placement. Place a bid. Get placed. <ArrowDown />
-        </a>
+        <nav className="why-chapters" aria-label="Page sections">
+          <a href="#evidence">
+            <BarChart3 size={17} /> The evidence
+          </a>
+          <a href="#how-it-works">
+            <Layers3 size={17} /> How it works
+          </a>
+        </nav>
       </div>
       <div className="why-showcase">
         <div
           className="why-showcase-stage"
-          data-step={slide.current % 2}
+          data-step={activeIndex % 2}
           role="img"
-          aria-label={`${heroSpaces[slide.current].label} with an example ad placement`}
+          aria-label={`${heroSpaces[activeIndex].label} with illustrative ad placements: ${heroSpaces[activeIndex].placements.map((placement) => `${placement.name}, ${placement.price}, ${placement.booked ? 'demo booked' : 'demo open'}`).join('; ')}`}
         >
           <SceneBoundary
             onFailure={() => {
               setFailed(true);
-              setSlide({ current: 0, previous: null });
+              setActiveIndex(0);
             }}
           >
             <Scene
@@ -140,8 +156,75 @@ export default function HeroShowcase() {
               playing={playing}
               reducedMotion={reducedMotion}
               onReady={modelReady}
+              onProject={projectPlacement}
             />
           </SceneBoundary>
+          {!failed && sceneReady && (
+            <div className="why-placement-overlay" key={activeIndex} aria-hidden="true">
+              <svg className="why-placement-lines" viewBox="0 0 100 100" preserveAspectRatio="none">
+                {heroSpaces[activeIndex].placements.map((placement) => {
+                  const key = `${activeIndex}-${placement.id}`;
+                  return (
+                    <g className={placement.booked ? 'is-booked' : 'is-open'} key={placement.id}>
+                      <polygon
+                        ref={(node) => {
+                          (annotationNodes.current[key] ??= {}).box = node;
+                        }}
+                      />
+                      <polyline
+                        ref={(node) => {
+                          (annotationNodes.current[key] ??= {}).line = node;
+                        }}
+                      />
+                    </g>
+                  );
+                })}
+              </svg>
+              {heroSpaces[activeIndex].placements.map((placement) => (
+                <div
+                  key={placement.id}
+                  className={`why-placement-card ${placement.booked ? 'is-booked' : 'is-open'}`}
+                  style={{ top: `${placement.label.top}%`, [placement.label.side]: '2%' }}
+                >
+                  <div className="why-placement-card-heading">
+                    <strong>{placement.name}</strong>
+                    <span>{placement.booked ? 'Demo booked' : 'Demo open'}</span>
+                  </div>
+                  <div className="why-placement-card-detail">
+                    <span>{placement.format}</span>
+                    <b>{placement.price}</b>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+        <div className="why-showcase-controls" aria-label="Ad space examples">
+          {heroSpaces.map((space, next) => (
+            <button
+              key={space.label}
+              className="why-showcase-dot"
+              aria-label={`Show ${space.label.toLowerCase()} example`}
+              aria-pressed={activeIndex === next}
+              disabled={failed}
+              onClick={() => {
+                setIndex(next);
+                setPaused(true);
+              }}
+            >
+              <span />
+            </button>
+          ))}
+          {!reducedMotion && (
+            <button
+              className="why-showcase-pause"
+              aria-label={paused ? 'Play model carousel' : 'Pause model carousel'}
+              disabled={failed}
+              onClick={() => setPaused((current) => !current)}
+            >
+              {paused ? <Play size={13} /> : <Pause size={13} />}
+            </button>
+          )}
         </div>
         <Link className="why-showcase-link" href="/studio">
           Make it your ad space <ArrowUpRight size={15} />

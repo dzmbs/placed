@@ -1,23 +1,14 @@
 'use client';
 import Link from 'next/link';
 import { useState } from 'react';
-import {
-  ArrowRight,
-  ArrowUpRight,
-  Plus,
-  Search,
-  Shirt,
-  Monitor,
-  Layers3,
-  SlidersHorizontal,
-} from 'lucide-react';
+import { ArrowRight, ArrowUpRight, Plus, Search, SlidersHorizontal } from 'lucide-react';
 import { assetCategory, display, minimumBid, topBid } from '@/lib/market';
 import { useMarket } from './market-provider';
 import { AssetArt } from './market-media';
 import { Badge, Empty, MarketUnavailable, MarketShell, PageTitle } from './market-ui';
 
 export default function MarketExplore() {
-  const { state } = useMarket(),
+  const { state, refresh } = useMarket(),
     [query, setQuery] = useState(''),
     [filter, setFilter] = useState('All spaces');
   if (!state) return <MarketUnavailable />;
@@ -33,31 +24,6 @@ export default function MarketExplore() {
             ? ['twitch', 'x-banner', 'digital'].includes(asset.draft.asset)
             : !['twitch', 'x-banner', 'digital'].includes(asset.draft.asset))),
   );
-  const categories = [
-    {
-      label: 'Physical',
-      title: 'Out in the world',
-      text: 'Outfits, billboards & everything between',
-      icon: Shirt,
-      count: state.assets.filter((a) => !['twitch', 'x-banner', 'digital'].includes(a.draft.asset))
-        .length,
-    },
-    {
-      label: 'Digital',
-      title: 'Across your screen',
-      text: 'Streams, profiles & digital spaces',
-      icon: Monitor,
-      count: state.assets.filter((a) => ['twitch', 'x-banner', 'digital'].includes(a.draft.asset))
-        .length,
-    },
-    {
-      label: 'Revenue tokens',
-      title: 'A share of what’s next',
-      text: 'Explore creator revenue tokens',
-      icon: Layers3,
-      count: state.assets.filter((a) => !!a.financing).length,
-    },
-  ];
   const openCampaigns = state.campaigns.filter(
     (c) => c.status === 'open' && c.opens <= state.now && c.closes > state.now,
   );
@@ -74,29 +40,19 @@ export default function MarketExplore() {
           </Link>
         }
       />
-      <div className="mp-discover-categories" aria-label="Browse categories">
-        {categories.map((category) => (
-          <button
-            key={category.label}
-            aria-pressed={filter === category.label}
-            className={filter === category.label ? 'active' : ''}
-            onClick={() => setFilter(filter === category.label ? 'All spaces' : category.label)}
-          >
-            <div className="mp-category-top">
-              <category.icon size={27} strokeWidth={1.5} />
-              <span>
-                {category.count} {category.count === 1 ? 'space' : 'spaces'}
-              </span>
-            </div>
-            <strong>{category.title}</strong>
-            <div className="mp-category-bottom">
-              <span>{category.text}</span>
-              <ArrowUpRight size={19} />
-            </div>
-          </button>
-        ))}
-      </div>
       <section className="mp-discover-results" aria-label="Available ad spaces">
+        {!!state.unavailableListingCount && (
+          <div className="mp-service-error" role="status">
+            <span>
+              {state.unavailableListingCount === 1
+                ? 'One listing is temporarily unavailable because its details could not be loaded.'
+                : `${state.unavailableListingCount} listings are temporarily unavailable because their details could not be loaded.`}
+            </span>
+            <button className="mp-button" onClick={() => void refresh()}>
+              Try again
+            </button>
+          </div>
+        )}
         <div className="mp-results-heading">
           <h2>
             Explore spaces <span>{assets.length}</span>
@@ -221,7 +177,18 @@ export default function MarketExplore() {
             </button>
           </div>
         ) : (
-          <Empty title="No ad spaces listed yet" text="New listings will appear here." />
+          <Empty
+            title={
+              state.unavailableListingCount
+                ? 'No ad spaces available to browse right now'
+                : 'No ad spaces listed yet'
+            }
+            text={
+              state.unavailableListingCount
+                ? 'Please check back when listing details are available.'
+                : 'New listings will appear here.'
+            }
+          />
         )}
       </section>
       <Link className="mp-create-banner" href="/studio">

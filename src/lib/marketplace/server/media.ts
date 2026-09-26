@@ -12,9 +12,14 @@ const root = path.join(process.cwd(), 'data', 'marketplace-media');
 export function mediaHash(uri: string): Hex | undefined {
   try {
     const url = new URL(uri, 'http://local');
-    const origin = new URL((process.env.APP_ORIGIN || 'http://127.0.0.1:3000').split(',')[0].trim())
-      .origin;
-    if (url.origin !== 'http://local' && url.origin !== origin) return;
+    // Media is content-addressed and integrity-checked on load, so a URI minted
+    // by any of this app's origins (including a local dev server before the
+    // app was hosted) resolves to the same stored file.
+    const origins = (process.env.APP_ORIGIN || 'http://127.0.0.1:3000')
+      .split(',')
+      .map((value) => new URL(value.trim()).origin);
+    const loopback = ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname);
+    if (url.origin !== 'http://local' && !loopback && !origins.includes(url.origin)) return;
     const match = /^\/api\/marketplace\/media\/(0x[a-f0-9]{64})$/.exec(url.pathname);
     return match?.[1] as Hex | undefined;
   } catch {

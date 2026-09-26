@@ -1,9 +1,16 @@
 import 'server-only';
-import { createHmac } from 'node:crypto';
+import { createHmac, createHash } from 'node:crypto';
 import { signRequest } from '@worldcoin/idkit-core/signing';
 import type { IDKitResult } from '@worldcoin/idkit-core';
 import type { Address } from 'viem';
 import { database } from './database';
+import {
+  reusableWorldRequest,
+  claimWorldAttempt,
+  deferWorldAttempt,
+  retireWorldRequest,
+} from '../world-request-store';
+import { ReadCache } from '../read-cache';
 import { RequestError } from './http';
 import { publicClient, requireDeployment, signingAccount } from './chain';
 import { contracts, auctionDomain } from '../config';
@@ -33,7 +40,12 @@ export function worldConfiguration() {
     environment: environment as 'production' | 'staging',
   };
 }
-export function createWorldRequest(wallet: Address) {
+// Diagnostics only: nonce prefixes and wallets, never proofs, signatures or keys.
+export function worldDebug(event: string, details: Record<string, unknown> = {}) {
+  console.info(`[world] ${event}`, details);
+}
+const short = (value: string) => value.slice(0, 10);
+export function createWorldRequest(wallet: Address, fresh = false) {
   const config = worldConfiguration();
   try {
     requireWorldStagingToken(config.environment, process.env.WORLD_STAGING_VERIFICATION_TOKEN);
@@ -41,46 +53,65 @@ export function createWorldRequest(wallet: Address) {
     if (error instanceof WorldVerifierError) throw new RequestError(error.message, error.status);
     throw error;
   }
-  const signature = signRequest({
-    signingKeyHex: config.signingKey,
-    action: config.action,
-    ttl: 300,
-  });
-  const signal = `placed:${wallet.toLowerCase()}:11155111:${signature.nonce}`;
   const db = database();
   const now = Math.floor(Date.now() / 1000);
-  db.prepare('DELETE FROM world_requests WHERE expires < ?').run(now);
-  const row = db
-    .prepare('SELECT COUNT(*) AS count FROM world_requests WHERE wallet = ? AND consumed = 0')
-    .get(wallet.toLowerCase()) as { count: number };
-  if (row.count >= 5)
-    throw new RequestError('Too many pending World requests. Try again in five minutes.', 429);
-  db.prepare(
-    'INSERT INTO world_requests(nonce,wallet,signal,action,environment,expires) VALUES(?,?,?,?,?,?)',
-  ).run(
-    signature.nonce,
-    wallet.toLowerCase(),
-    signal,
-    config.action,
-    config.environment,
-    signature.expiresAt,
+  const request = reusableWorldRequest(
+    db,
+    wallet,
+    {
+      app_id: config.appId,
+      rp_id: config.rpId,
+      action: config.action,
+      environment: config.environment,
+    },
+    () => {
+      const signature = signRequest({
+        signingKeyHex: config.signingKey,
+        action: config.action,
+        ttl: 300,
+      });
+      const signal = `placed:${wallet.toLowerCase()}:11155111:${signature.nonce}`;
+      return {
+        app_id: config.appId,
+        action: config.action,
+        environment: config.environment,
+        signal,
+        allow_legacy_proofs: true,
+        rp_context: {
+          rp_id: config.rpId,
+          nonce: signature.nonce,
+          created_at: signature.createdAt,
+          expires_at: signature.expiresAt,
+          signature: signature.sig,
+        },
+      };
+    },
+    now,
+    fresh,
   );
-  return {
-    app_id: config.appId,
+  worldDebug('request issued', {
+    wallet,
+    fresh,
+    nonce: short(request.rp_context.nonce),
+    expiresIn: request.rp_context.expires_at - now,
     action: config.action,
     environment: config.environment,
-    signal,
-    allow_legacy_proofs: true as const,
-    rp_context: {
-      rp_id: config.rpId,
-      nonce: signature.nonce,
-      created_at: signature.createdAt,
-      expires_at: signature.expiresAt,
-      signature: signature.sig,
-    },
-  };
+  });
+  return request;
 }
-export async function verifyWorldRequest(wallet: Address, result: IDKitResult) {
+const verificationReads = new ReadCache(128);
+export function verifyWorldRequest(wallet: Address, result: IDKitResult) {
+  const digest = createHash('sha256')
+    .update(JSON.stringify(result) ?? '')
+    .digest('hex');
+  return verificationReads.read(
+    `${wallet.toLowerCase()}:${digest}`,
+    () => verifyRequest(wallet, result),
+    0,
+    5000,
+  );
+}
+async function verifyRequest(wallet: Address, result: IDKitResult) {
   const config = worldConfiguration();
   if (!result || typeof result.nonce !== 'string' || !Array.isArray(result.responses))
     throw new RequestError('Invalid World verification response.');
@@ -97,8 +128,50 @@ export async function verifyWorldRequest(wallet: Address, result: IDKitResult) {
         consumed: number;
       }
     | undefined;
+  worldDebug('proof received', {
+    wallet,
+    nonce: short(result.nonce),
+    protocol: result.protocol_version,
+    environment: result.environment,
+    credential: (result.responses[0] as { identifier?: string } | undefined)?.identifier,
+    known: Boolean(expected),
+    consumed: Boolean(expected?.consumed),
+  });
   if (!expected || expected.consumed)
-    throw new RequestError('World request was not found or was already used.', 401);
+    throw new RequestError(
+      'World request was not found or was already used. Start verification again.',
+      401,
+    );
+  try {
+    const authorization = await verifyExpectedRequest(wallet, result, expected, config);
+    worldDebug('verified', { wallet, nonce: short(expected.nonce) });
+    return authorization;
+  } catch (error) {
+    // A proof now exists for this nonce, so it can never be used again.
+    retireWorldRequest(db, expected.nonce);
+    worldDebug('rejected', {
+      wallet,
+      nonce: short(expected.nonce),
+      status: error instanceof RequestError ? error.status : 'unexpected',
+      reason: error instanceof Error ? error.message : String(error),
+    });
+    throw error;
+  }
+}
+async function verifyExpectedRequest(
+  wallet: Address,
+  result: IDKitResult,
+  expected: {
+    nonce: string;
+    signal: string;
+    action: string;
+    environment: string;
+    expires: number;
+    consumed: number;
+  },
+  config: ReturnType<typeof worldConfiguration>,
+) {
+  const db = database();
   let nullifier: string;
   try {
     nullifier = validateWorldResult(
@@ -111,9 +184,24 @@ export async function verifyWorldRequest(wallet: Address, result: IDKitResult) {
       error instanceof Error && error.message.startsWith('World')
         ? error.message
         : 'World returned a malformed proof.';
-    console.warn('[World verification]', message);
     throw new RequestError(message, 401);
   }
+  const salt = process.env.WORLD_IDENTITY_SALT;
+  if (!salt || salt.length < 32)
+    throw new RequestError('World identity storage is not configured.', 503);
+  const identity = createHmac('sha256', salt)
+    .update(`${config.rpId}:${expected.action}:${nullifier}`)
+    .digest('hex');
+  assertIdentityAvailable(db, identity, wallet, config.environment);
+  const now = Math.floor(Date.now() / 1000);
+  const retryAt = claimWorldAttempt(db, wallet, now);
+  if (retryAt > now)
+    throw new RequestError(
+      `World verification is cooling down. Try again in ${retryAt - now} seconds.`,
+      429,
+    );
+  // Opening/closing the widget consumes no quota. Limit actual upstream proof
+  // attempts, including simultaneous submissions with different proof payloads.
   try {
     await verifyWorldProof(
       result,
@@ -123,33 +211,15 @@ export async function verifyWorldRequest(wallet: Address, result: IDKitResult) {
     );
   } catch (error) {
     if (error instanceof WorldVerifierError) {
-      console.warn('[World verifier]', error.code);
+      worldDebug('upstream verifier refused', { wallet, code: error.code, status: error.status });
+      if (error.status === 429) deferWorldAttempt(db, wallet, now + error.retryAfter);
       throw new RequestError(error.message, error.status);
     }
     throw error;
   }
-  const salt = process.env.WORLD_IDENTITY_SALT;
-  if (!salt || salt.length < 32)
-    throw new RequestError('World identity storage is not configured.', 503);
-  const identity = createHmac('sha256', salt)
-    .update(`${config.rpId}:${expected.action}:${nullifier}`)
-    .digest('hex');
   db.exec('BEGIN IMMEDIATE');
   try {
-    const person = db
-      .prepare('SELECT wallet FROM participants WHERE identity = ?')
-      .get(identity) as { wallet: string } | undefined;
-    const linked = db
-      .prepare('SELECT identity FROM participants WHERE wallet = ?')
-      .get(wallet.toLowerCase()) as { identity: string } | undefined;
-    if (
-      (person && person.wallet !== wallet.toLowerCase()) ||
-      (linked && linked.identity !== identity)
-    )
-      throw new RequestError(
-        'This person or wallet is already linked to another participant.',
-        409,
-      );
+    assertIdentityAvailable(db, identity, wallet, config.environment);
     const consumed = db
       .prepare(
         'UPDATE world_requests SET consumed = 1 WHERE nonce = ? AND consumed = 0 AND expires >= ?',
@@ -202,4 +272,30 @@ export async function participantAuthorization(wallet: Address) {
     message: { wallet, nonce, deadline: BigInt(deadline) },
   });
   return { wallet, deadline, signature };
+}
+
+function assertIdentityAvailable(
+  db: ReturnType<typeof database>,
+  identity: string,
+  wallet: Address,
+  environment: string,
+) {
+  const person = db.prepare('SELECT wallet FROM participants WHERE identity = ?').get(identity) as
+    { wallet: string } | undefined;
+  const linked = db
+    .prepare('SELECT identity FROM participants WHERE wallet = ?')
+    .get(wallet.toLowerCase()) as { identity: string } | undefined;
+  if (person && person.wallet !== wallet.toLowerCase())
+    throw new RequestError(
+      'This World ID is already linked to another wallet. Switch back to your verified wallet.' +
+        (environment === 'staging'
+          ? ' To test a separate sponsor, select a different identity in the World simulator.'
+          : ''),
+      409,
+    );
+  if (linked && linked.identity !== identity)
+    throw new RequestError(
+      'This wallet is already verified with a different World ID. Use its original World identity or connect another wallet.',
+      409,
+    );
 }

@@ -5,6 +5,7 @@ export class WorldVerifierError extends Error {
     message: string,
     public status: number,
     public code: string,
+    public retryAfter = 30,
   ) {
     super(message);
   }
@@ -37,6 +38,28 @@ export async function verifyWorldProof(
     body: JSON.stringify(result),
     signal: AbortSignal.timeout(20000),
   });
+  if (response.status === 429) {
+    const wait = response.headers.get('retry-after');
+    const seconds =
+      wait && /^\d+$/.test(wait)
+        ? Number(wait)
+        : wait
+          ? Math.ceil((Date.parse(wait) - Date.now()) / 1000)
+          : 30;
+    const retryAfter = Number.isFinite(seconds) ? Math.max(10, Math.min(seconds, 300)) : 30;
+    throw new WorldVerifierError(
+      `World is receiving too many verification requests. Try again in ${retryAfter} seconds.`,
+      429,
+      'rate_limited',
+      retryAfter,
+    );
+  }
+  if (response.status >= 500)
+    throw new WorldVerifierError(
+      'World verification is temporarily unavailable. Please try again shortly.',
+      503,
+      'unavailable',
+    );
   const verified = (await response.json()) as {
     environment?: string;
     success?: boolean;

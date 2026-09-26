@@ -41,6 +41,12 @@ The user signs a short-lived wallet challenge. The backend then signs an RP requ
 
 Successful human verification requires a person to complete the widget. A signed RP request and rejection tests alone are not evidence of a completed World verification.
 
+Closing or retrying the widget reuses the wallet's live signed request until it is near expiry; it does not create a pending-request queue. Duplicate simultaneous proof submissions share one verification call. Known identity conflicts are rejected locally before calling World, without granting authorization. Only actual upstream proof attempts spend the short per-wallet cooldown. World `429` responses retain a bounded `Retry-After` window; opening another dialog does not bypass it. Already verified wallets use their stored verification to obtain an authorization voucher rather than asking World to verify again.
+
+The Accrue reference uses the same signed-RP-request → IDKit → backend v4 verifier flow, but has no pending-request counter. Its unconfigured local-development flow substitutes a deterministic per-wallet identity, and its development AgentBook allows several agent addresses to map to one human. Those paths are not equivalent to Placed's Sepolia participant policy: one human maps to one participant wallet. Placed does not use the development fallback to authorize real testnet participants.
+
+For creator and sponsor testing in staging, use a different simulator identity for each wallet. Open the [identity picker](https://simulator.worldcoin.org/select-id), select another identity or choose **Add identity**, then start a fresh request in Placed. Reusing the creator's identity with a sponsor wallet correctly returns `409`; this is a participant conflict, not an invalid World proof. The app closes the failed widget and shows that explanation beside the wallet controls.
+
 ## ENSv2 parent
 
 `placed-demo.eth` is the registered testnet parent for this deployment. It is the namespace containing asset names such as `a1.placed-demo.eth` and slot names such as `s1.a1.placed-demo.eth`. Creators do not register a separate .eth name themselves.

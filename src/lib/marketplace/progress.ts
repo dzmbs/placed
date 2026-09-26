@@ -7,7 +7,16 @@ export function reportProgress(progress: TransactionProgress) {
   if (typeof window !== 'undefined')
     window.dispatchEvent(new CustomEvent('placed-transaction', { detail: progress }));
 }
+export class ConfirmedActionRefreshError extends Error {
+  constructor(public hash?: string) {
+    super(
+      'Your action completed, but we could not refresh the marketplace. Refresh to see the latest balances and activity.',
+    );
+    this.name = 'ConfirmedActionRefreshError';
+  }
+}
 export function friendlyMarketError(error: unknown): string {
+  if (error instanceof ConfirmedActionRefreshError) return error.message;
   let current: unknown = error;
   for (let i = 0; i < 8 && current && typeof current === 'object'; i++) {
     const e = current as { code?: number; name?: string; message?: string; cause?: unknown };

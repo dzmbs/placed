@@ -12,6 +12,8 @@ import { readAsset, chainId } from './reader';
 import { contracts, deploymentBlock } from '../config';
 import { ccaAbi } from '../uniswap';
 import { RequestError } from './http';
+import { indexedEvents } from './events';
+import type { Asset } from '../domain';
 
 const factoryAbi = parseAbi([
   'function protocolFeeController() view returns(address)',
@@ -23,8 +25,13 @@ const feeAbi = parseAbi([
 const paramsType = parseAbiParameters(
   '(address currency,address tokensRecipient,address fundsRecipient,uint64 startBlock,uint64 endBlock,uint64 claimBlock,uint256 tickSpacing,address validationHook,uint256 floorPrice,uint128 requiredCurrencyRaised,bytes auctionStepsData)',
 );
-export async function readLaunch(assetId: string, wallet?: Address) {
-  const asset = await readAsset(chainId(assetId));
+export async function readLaunch(
+  assetId: string,
+  wallet?: Address,
+  suppliedAsset?: Asset,
+  at?: bigint,
+) {
+  const asset = suppliedAsset ?? (await readAsset(chainId(assetId)));
   if (!asset.financing) throw new RequestError('This asset has no financing launch.', 404);
   const { auction } = asset.financing;
   const names = [
@@ -44,12 +51,19 @@ export async function readLaunch(assetId: string, wallet?: Address) {
     allowFailure: false,
     contracts: names.map((functionName) => ({ address: auction, abi: ccaAbi, functionName })),
   });
-  const block = await publicClient.getBlockNumber();
-  const creation = await publicClient.getContractEvents({
-    address: contracts.ccaFactory,
-    abi: factoryAbi,
-    eventName: 'AuctionCreated',
-    args: { auction },
+  const block = at ?? (await publicClient.getBlockNumber());
+  const creation = (
+    await indexedEvents({
+      address: contracts.ccaFactory,
+      abi: factoryAbi,
+      eventName: 'AuctionCreated',
+      fromBlock: deploymentBlock,
+      toBlock: block,
+    })
+  ).filter((event) => event.args.auction.toLowerCase() === auction.toLowerCase());
+  const activity = await indexedEvents({
+    address: auction,
+    abi: ccaAbi,
     fromBlock: deploymentBlock,
     toBlock: block,
   });
@@ -74,13 +88,7 @@ export async function readLaunch(assetId: string, wallet?: Address) {
   if (fee > gross) fee = gross;
   let creatorProceeds: string | undefined, liquidityFunding: string | undefined;
   if (BigInt(values[9]) > 0n) {
-    const sweeps = await publicClient.getContractEvents({
-      address: auction,
-      abi: ccaAbi,
-      eventName: 'CurrencySwept',
-      fromBlock: configuration.endBlock,
-      toBlock: block,
-    });
+    const sweeps = activity.filter((event) => event.eventName === 'CurrencySwept');
     const sweep = sweeps[0];
     if (sweep?.transactionHash && sweep.args.amount !== undefined) {
       const netReceived = sweep.args.amount;
@@ -107,17 +115,11 @@ export async function readLaunch(assetId: string, wallet?: Address) {
       ? 0n
       : gross - fee;
   const liquidity = (net * BigInt(asset.financing.liquidityCurrencyMps)) / 10_000_000n;
-  const ownerLogs =
-    wallet && block >= configuration.startBlock
-      ? await publicClient.getContractEvents({
-          address: auction,
-          abi: ccaAbi,
-          eventName: 'BidSubmitted',
-          args: { owner: wallet },
-          fromBlock: configuration.startBlock,
-          toBlock: block,
-        })
-      : [];
+  const ownerLogs = wallet
+    ? activity
+        .filter((event) => event.eventName === 'BidSubmitted')
+        .filter((event) => event.args.owner.toLowerCase() === wallet.toLowerCase())
+    : [];
   const bids = await Promise.all(
     ownerLogs.map(async (log) => {
       const id = log.args.id!;
@@ -127,24 +129,12 @@ export async function readLaunch(assetId: string, wallet?: Address) {
         functionName: 'bids',
         args: [id],
       });
-      const [exits, claims] = await Promise.all([
-        publicClient.getContractEvents({
-          address: auction,
-          abi: ccaAbi,
-          eventName: 'BidExited',
-          args: { bidId: id },
-          fromBlock: configuration.startBlock,
-          toBlock: block,
-        }),
-        publicClient.getContractEvents({
-          address: auction,
-          abi: ccaAbi,
-          eventName: 'TokensClaimed',
-          args: { bidId: id },
-          fromBlock: configuration.startBlock,
-          toBlock: block,
-        }),
-      ]);
+      const exits = activity
+        .filter((event) => event.eventName === 'BidExited')
+        .filter((event) => event.args.bidId === id);
+      const claims = activity
+        .filter((event) => event.eventName === 'TokensClaimed')
+        .filter((event) => event.args.bidId === id);
       let hints: { last: string; outbid: string } | undefined;
       if (Boolean(values[7]) && bid.exitedBlock === 0n && bid.maxPrice <= BigInt(values[5])) {
         let cursor = BigInt(values[8]);

@@ -1,5 +1,5 @@
 'use client';
-import { reportProgress } from './progress';
+import { ConfirmedActionRefreshError, reportProgress } from './progress';
 import { erc20Abi, formatUnits, type Address, type EIP1193Provider } from 'viem';
 import type { MarketAction, MarketState, Artwork, Receipt } from '@/lib/market';
 import {
@@ -14,7 +14,7 @@ import { priceQ96 } from './math';
 import type { ProofResult } from './domain';
 import type { MarketSnapshot } from './snapshot';
 import { mapMarketState, uiAmount } from './market-state';
-import * as chain from './client';
+import * as liveChain from './client';
 
 export interface MarketWallet {
   address(): Address | undefined;
@@ -23,8 +23,8 @@ export interface MarketWallet {
   disconnect(): Promise<void>;
   switchNetwork(): Promise<void>;
   verify(): Promise<void>;
-  authenticate(): Promise<chain.WalletSession>;
-  session(): chain.WalletSession | undefined;
+  authenticate(): Promise<liveChain.WalletSession>;
+  session(): liveChain.WalletSession | undefined;
 }
 function rawAmount(value: number, decimals = 6) {
   if (!Number.isSafeInteger(value) || value <= 0) throw new Error('Enter a valid positive amount.');
@@ -37,7 +37,7 @@ function seconds(value: number) {
   if (!Number.isSafeInteger(value)) throw new Error('Enter a valid date.');
   return BigInt(Math.floor(value / 1000));
 }
-export function createMarketAdapter(wallet: MarketWallet): MarketClient {
+export function createMarketAdapter(wallet: MarketWallet, chain = liveChain): MarketClient {
   let snapshot: MarketSnapshot | undefined;
   const listeners = new Set<() => void>();
   const quotes = new Map<
@@ -46,9 +46,13 @@ export function createMarketAdapter(wallet: MarketWallet): MarketClient {
   >();
   const receipts: Receipt[] = [];
   let completed: { key: string; message: string } | undefined;
+  let minimumBlock = 0n;
   async function getState(): Promise<MarketState> {
     const account = wallet.address();
-    const next = await chain.api<MarketSnapshot>(`/state${account ? `?wallet=${account}` : ''}`);
+    const query = new URLSearchParams();
+    if (account) query.set('wallet', account);
+    if (minimumBlock) query.set('minimumBlock', String(minimumBlock));
+    const next = await chain.api<MarketSnapshot>(`/state${query.size ? `?${query}` : ''}`);
     if (account?.toLowerCase() !== wallet.address()?.toLowerCase()) return getState();
     snapshot = next;
     const state = mapMarketState(next);
@@ -184,15 +188,15 @@ export function createMarketAdapter(wallet: MarketWallet): MarketClient {
     },
     async execute(action: MarketAction, accountId: string) {
       const latest = await getState();
-      assertCanConfirm(latest, action, accountId);
-      const account = wallet.address()!;
-      const current = snapshot!;
       const key = JSON.stringify([accountId, action]);
       if (completed?.key === key) {
         const result = { state: latest, message: completed.message };
         completed = undefined;
         return result;
       }
+      assertCanConfirm(latest, action, accountId);
+      const account = wallet.address()!;
+      const current = snapshot!;
       const asset =
         'assetId' in action ? current.assets.find((a) => a.id === action.assetId) : undefined;
       const campaign =
@@ -497,6 +501,14 @@ export function createMarketAdapter(wallet: MarketWallet): MarketClient {
           title: action.type === 'faucet' ? 'Demo USDC received' : `${action.type} confirmed`,
         });
       completed = { key, message };
+      if (
+        result &&
+        typeof result === 'object' &&
+        'blockNumber' in result &&
+        typeof result.blockNumber === 'bigint' &&
+        result.blockNumber > minimumBlock
+      )
+        minimumBlock = result.blockNumber;
       reportProgress({
         phase: 'refreshing',
         label: 'Updating your asset and balances',
@@ -504,7 +516,16 @@ export function createMarketAdapter(wallet: MarketWallet): MarketClient {
           ? { hash: String(result.transactionHash) }
           : {}),
       });
-      const state = await getState();
+      let state: MarketState;
+      try {
+        state = await getState();
+      } catch {
+        throw new ConfirmedActionRefreshError(
+          result && typeof result === 'object' && 'transactionHash' in result
+            ? String(result.transactionHash)
+            : undefined,
+        );
+      }
       completed = undefined;
       for (const listener of listeners) listener();
       return { state, message };

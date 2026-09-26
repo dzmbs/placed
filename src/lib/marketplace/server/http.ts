@@ -47,10 +47,18 @@ export async function readBody(request: Request, limit: number) {
 }
 export function failure(error: unknown): Response {
   if (error instanceof RequestError)
-    return Response.json({ error: error.message }, { status: error.status });
-  // Provider errors can contain request headers or URLs. Return a fixed message instead.
+    return Response.json(
+      { error: error.message },
+      {
+        status: error.status,
+        ...(error.status === 429 ? { headers: { 'retry-after': '10' } } : {}),
+      },
+    );
+  // Provider errors can contain request headers or URLs. Return a fixed message
+  // instead, but keep the real error in the server log for diagnosis.
+  console.error('[marketplace] request failed:', error);
   return Response.json(
     { error: 'The request could not be completed. Check the service configuration and try again.' },
-    { status: 503 },
+    { status: 503, headers: { 'retry-after': '3' } },
   );
 }

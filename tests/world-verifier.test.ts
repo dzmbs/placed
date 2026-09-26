@@ -71,3 +71,25 @@ test('World missing or expired staging access cannot authorize a participant', a
     globalThis.fetch = original;
   }
 });
+
+test('World rate limits preserve a safe retry window even with a non-JSON body', async () => {
+  const original = globalThis.fetch;
+  try {
+    globalThis.fetch = async () =>
+      new Response('Too many requests', { status: 429, headers: { 'retry-after': '60' } });
+    await assert.rejects(verifyWorldProof({} as IDKitResult, 'rp_test', 'production'), (error) => {
+      assert.ok(error instanceof WorldVerifierError);
+      assert.equal(error.status, 429);
+      assert.equal(error.retryAfter, 60);
+      assert.match(error.message, /60 seconds/);
+      return true;
+    });
+    globalThis.fetch = async () => new Response('Unavailable', { status: 503 });
+    await assert.rejects(verifyWorldProof({} as IDKitResult, 'rp_test', 'production'), {
+      status: 503,
+      code: 'unavailable',
+    });
+  } finally {
+    globalThis.fetch = original;
+  }
+});

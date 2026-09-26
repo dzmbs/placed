@@ -23,7 +23,11 @@ import {
 } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import { WalletPopover } from './wallet-popover';
-import { friendlyMarketError, type TransactionProgress } from '@/lib/marketplace/progress';
+import {
+  ConfirmedActionRefreshError,
+  friendlyMarketError,
+  type TransactionProgress,
+} from '@/lib/marketplace/progress';
 import { display, type MarketAction, type MarketState } from '@/lib/market';
 import {
   assertCanConfirm,
@@ -40,6 +44,7 @@ type Transaction = {
   action: MarketAction;
   user: string;
   onSuccess?: () => void;
+  confirmed?: { hash?: string };
 };
 type Context = {
   state: MarketState | null;
@@ -350,25 +355,36 @@ export function MarketProvider({
     }
     if (pending.current) return;
     setTxError('');
+    setProgress(null);
     setTransaction({ title, description, action, onSuccess, user: current.current.current });
     setWalletOpen(false);
   };
   const confirm = async () => {
     if (!transaction || !client || pending.current) return;
     const tx = transaction;
-    setProgress({ phase: 'preparing', label: `Preparing ${tx.title.toLowerCase()}` });
+    setProgress(
+      tx.confirmed
+        ? {
+            phase: 'refreshing',
+            label: 'Refreshing balances and activity',
+            hash: tx.confirmed.hash,
+          }
+        : { phase: 'preparing', label: `Preparing ${tx.title.toLowerCase()}` },
+    );
     pending.current = true;
     generation.current++;
     setBusy(true);
     setTxError('');
     try {
       // Refresh before signing so account/network changes invalidate an old review.
-      const latest = await client.getState();
-      if (!mounted.current) return;
-      accept(latest);
-      assertCanConfirm(latest, tx.action, tx.user);
+      if (!tx.confirmed) {
+        const latest = await client.getState();
+        if (!mounted.current) return;
+        accept(latest);
+        assertCanConfirm(latest, tx.action, tx.user);
+      }
       setTransaction(null);
-      notify('Continue in your wallet. Waiting for confirmation…');
+      if (!tx.confirmed) notify('Continue in your wallet. Waiting for confirmation…');
       const result = await client.execute(tx.action, tx.user);
       if (!mounted.current) return;
       accept(result.state);
@@ -384,8 +400,14 @@ export function MarketProvider({
         );
     } catch (err) {
       if (mounted.current) {
-        setTransaction(tx);
-        setTxError(friendlyMarketError(err));
+        const confirmed =
+          err instanceof ConfirmedActionRefreshError ? { hash: err.hash } : tx.confirmed;
+        setTransaction({ ...tx, confirmed });
+        setTxError(
+          confirmed
+            ? friendlyMarketError(new ConfirmedActionRefreshError(confirmed.hash))
+            : friendlyMarketError(err),
+        );
       }
     } finally {
       pending.current = false;
@@ -529,6 +551,16 @@ export function MarketProvider({
           {walletError && (
             <p className="mp-error" role="alert">
               {walletError}
+              {walletError.includes('World simulator') && (
+                <a
+                  className="mp-transaction-link"
+                  href="https://simulator.worldcoin.org/select-id"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Choose another test identity <ArrowUpRight size={14} />
+                </a>
+              )}
             </p>
           )}
           {!active && client && (
@@ -544,7 +576,11 @@ export function MarketProvider({
       )}
       {transaction && (
         <MarketDialog title={transaction.title} close={() => setTransaction(null)} busy={busy}>
-          <p className="mp-muted">{transaction.description}</p>
+          <p className="mp-muted">
+            {transaction.confirmed
+              ? 'This action already completed. Refreshing updates your balances and activity without submitting it again.'
+              : transaction.description}
+          </p>
           <dl className="mp-rows">
             <div>
               <dt>Account</dt>
@@ -567,14 +603,19 @@ export function MarketProvider({
                   target="_blank"
                   rel="noreferrer"
                 >
-                  View submitted transaction <ArrowUpRight size={14} />
+                  {transaction.confirmed
+                    ? 'View confirmed transaction'
+                    : 'View submitted transaction'}{' '}
+                  <ArrowUpRight size={14} />
                 </a>
               )}
             </p>
           )}
           {busy && (
             <p className="mp-muted" role="status">
-              Complete the request in your wallet, then wait for confirmation.
+              {transaction.confirmed
+                ? 'Updating balances and activity…'
+                : 'Complete the request in your wallet, then wait for confirmation.'}
             </p>
           )}
           <div className="mp-dialog-actions">
@@ -584,11 +625,12 @@ export function MarketProvider({
             <button className="mp-button primary" disabled={busy} onClick={() => void confirm()}>
               {busy ? (
                 <>
-                  <LoaderCircle size={18} className="spin" /> Confirming…
+                  <LoaderCircle size={18} className="spin" />{' '}
+                  {transaction.confirmed ? 'Refreshing…' : 'Confirming…'}
                 </>
               ) : (
                 <>
-                  Confirm <ArrowRight size={18} />
+                  {transaction.confirmed ? 'Refresh balances' : 'Confirm'} <ArrowRight size={18} />
                 </>
               )}
             </button>

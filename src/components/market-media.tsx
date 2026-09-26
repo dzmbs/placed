@@ -1,6 +1,6 @@
 'use client';
-import { useState } from 'react';
-import { ImagePlus } from 'lucide-react';
+import { useRef, useState } from 'react';
+import { ImagePlus, LoaderCircle, X } from 'lucide-react';
 import type { Artwork, MarketAsset } from '@/lib/market';
 
 async function digest(data: ArrayBuffer) {
@@ -11,15 +11,21 @@ export function MediaInput({
   value,
   onChange,
   proof = false,
+  preview = false,
+  onRemove,
 }: {
   value?: Artwork;
   onChange: (art: Artwork) => void;
   proof?: boolean;
+  preview?: boolean;
+  onRemove?: () => void;
 }) {
   const [error, setError] = useState(''),
-    [busy, setBusy] = useState(false);
+    [busy, setBusy] = useState(false),
+    [dragging, setDragging] = useState(false),
+    uploading = useRef(false);
   async function upload(file?: File) {
-    if (!file) return;
+    if (!file || uploading.current) return;
     setError('');
     if (
       !['image/png', 'image/jpeg', 'image/webp'].includes(file.type) ||
@@ -28,6 +34,7 @@ export function MediaInput({
       setError('Use a PNG, JPG or WebP smaller than 2 MB.');
       return;
     }
+    uploading.current = true;
     setBusy(true);
     try {
       const url = await new Promise<string>((resolve, reject) => {
@@ -40,27 +47,45 @@ export function MediaInput({
     } catch {
       setError('The image could not be read. Try another file.');
     } finally {
+      uploading.current = false;
       setBusy(false);
     }
   }
   return (
-    <div className="mp-media-input">
+    <div className="mp-media-input" aria-busy={busy}>
       {value && (
         <div className={`mp-upload-preview ${proof ? 'proof' : ''}`}>
           <img src={value.url} alt={value.name} />
           <span>{value.name}</span>
         </div>
       )}
-      <label className="mp-upload">
-        <ImagePlus size={21} />
-        <strong>
+      <label
+        className={`mp-upload ${dragging ? 'dragging' : ''}`}
+        onDragOver={(e) => {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = busy ? 'none' : 'copy';
+          setDragging(!busy);
+        }}
+        onDragLeave={(e) => {
+          if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setDragging(false);
+        }}
+        onDrop={(e) => {
+          e.preventDefault();
+          setDragging(false);
+          void upload(e.dataTransfer.files[0]);
+        }}
+      >
+        {busy ? <LoaderCircle className="spin" size={21} /> : <ImagePlus size={21} />}
+        <strong aria-live="polite">
           {busy
             ? 'Reading image…'
             : value
               ? 'Replace image'
               : proof
                 ? 'Upload proof photo'
-                : 'Upload artwork'}
+                : preview
+                  ? 'Drop your logo here or choose an image'
+                  : 'Upload artwork'}
         </strong>
         <small>PNG, JPG, WebP · up to 2 MB</small>
         <input
@@ -74,6 +99,16 @@ export function MediaInput({
           }}
         />
       </label>
+      {value && onRemove && (
+        <button
+          type="button"
+          className="mp-text-button mp-preview-remove"
+          disabled={busy}
+          onClick={onRemove}
+        >
+          <X size={15} /> Remove preview
+        </button>
+      )}
       {error && (
         <p className="mp-error" role="alert">
           {error}

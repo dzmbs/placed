@@ -163,7 +163,6 @@ export function BiddingPanel({
   asset,
   campaign: c,
   artwork,
-  onArtwork,
   onCreate,
   onProof,
   canCreate = true,
@@ -171,7 +170,6 @@ export function BiddingPanel({
   asset: MarketAsset;
   campaign?: CampaignRecord;
   artwork?: Artwork;
-  onArtwork: (art: Artwork) => void;
   onCreate: () => void;
   onProof: () => void;
   canCreate?: boolean;
@@ -226,7 +224,6 @@ export function BiddingPanel({
         />
         {live && !own && (
           <>
-            <MediaInput value={artwork} onChange={onArtwork} />
             <label className="mp-field">
               Your bid (USDC)
               <input
@@ -263,6 +260,9 @@ export function BiddingPanel({
             >
               Review bid
             </SpendButton>
+            {!artwork && (
+              <p className="mp-small mp-muted">Add your logo in the preview above to bid.</p>
+            )}
             <p className="mp-small mp-muted">
               Winning artwork becomes public when the auction is finalized.
             </p>
@@ -302,7 +302,6 @@ export function BiddingPanel({
             />
             {won && c.artworkPermission && (
               <>
-                <MediaInput value={artwork} onChange={onArtwork} />
                 <AccessButton
                   disabled={!artwork}
                   onClick={() =>

@@ -2,11 +2,12 @@
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useState } from 'react';
-import { ArrowLeft, ArrowUpRight, RotateCcw } from 'lucide-react';
+import { ArrowLeft, ArrowUpRight, ImagePlus, RotateCcw } from 'lucide-react';
 import { assetCategory, topBid, UNIT, type Artwork } from '@/lib/market';
 import { useMarket, MarketDialog } from './market-provider';
 import { Badge, Empty, MarketUnavailable, MarketShell, PageTitle } from './market-ui';
 import { BiddingPanel, CampaignForm, ProofPanel } from './market-campaign';
+import { MediaInput } from './market-media';
 import { FinanceForm, InvestmentPanel, RevenueTerms, TradingPanel } from './market-finance';
 import type { CameraCommand } from './viewer';
 const Viewer = dynamic(() => import('./viewer'), {
@@ -53,6 +54,15 @@ export default function MarketAssetPage({
     own = state.current === asset.owner,
     tab = asset.financing ? selectedTab : 'advertise',
     creator = state.people.find((person) => person.id === asset.owner)?.name;
+  const canUpdateArtwork = Boolean(
+      campaign?.status === 'booked' &&
+      campaign.artworkPermission &&
+      state.current &&
+      topBid(campaign)?.user === state.current,
+    ),
+    canPreview =
+      canUpdateArtwork ||
+      (!historical && (!campaign || campaign.status === 'open' || campaign.status === 'no-sale'));
   const draft = {
     ...asset.draft,
     spots: asset.draft.spots.map((s) => {
@@ -64,7 +74,7 @@ export default function MarketAssetPage({
         ...s,
         price: c && topBid(c) ? topBid(c)!.amount / UNIT : s.price,
         artwork:
-          (s.id === slot?.id && artworks[s.id]?.url) ||
+          (s.id === slot?.id && canPreview && artworks[s.id]?.url) ||
           c?.publicArtwork?.url ||
           (s.id === slot?.id && historical ? undefined : s.artwork),
       };
@@ -167,7 +177,7 @@ export default function MarketAssetPage({
             <RevenueTerms asset={asset} financing={asset.financing} />
           ) : null}
         </div>
-        <div className="mp-asset-action">
+        <div className="mp-stack mp-asset-action">
           {historical && slot && tab === 'advertise' && (
             <div className="mp-inline-note">
               <span>Past campaign</span>
@@ -181,16 +191,53 @@ export default function MarketAssetPage({
           )}
           {tab === 'advertise' ? (
             slot ? (
-              <BiddingPanel
-                key={campaign?.id ?? slot?.id}
-                asset={asset}
-                campaign={campaign}
-                artwork={artworks[slot.id]}
-                onArtwork={(art) => setArtworks((a) => ({ ...a, [slot.id]: art }))}
-                onCreate={() => setModal('campaign')}
-                onProof={() => setModal('proof')}
-                canCreate={!historical}
-              />
+              <>
+                {canPreview && (
+                  <section className="mp-box mp-logo-preview">
+                    <div className="mp-section-heading">
+                      <h2>
+                        <ImagePlus size={22} />{' '}
+                        {canUpdateArtwork ? 'Preview new artwork' : 'Try your logo'}
+                      </h2>
+                      <Badge>Only you see this</Badge>
+                    </div>
+                    <p className="mp-muted">
+                      See your artwork on {slot.name} before{' '}
+                      {canUpdateArtwork ? 'updating it' : 'you bid'}.
+                    </p>
+                    <MediaInput
+                      key={slot.id}
+                      value={artworks[slot.id]}
+                      preview
+                      onChange={(art) => {
+                        setArtworks((a) => ({ ...a, [slot.id]: art }));
+                        select(slot.id);
+                      }}
+                      onRemove={() =>
+                        setArtworks((a) => {
+                          const next = { ...a };
+                          delete next[slot.id];
+                          return next;
+                        })
+                      }
+                    />
+                    <p className="mp-small mp-muted">
+                      {canUpdateArtwork
+                        ? 'Public artwork changes only after you confirm an update.'
+                        : 'No wallet needed to preview. Your logo is submitted when you bid.'}
+                    </p>
+                  </section>
+                )}
+                <BiddingPanel
+                  key={campaign?.id ?? slot?.id}
+                  asset={asset}
+                  campaign={campaign}
+                  artwork={artworks[slot.id]}
+                  onCreate={() => setModal('campaign')}
+                  onProof={() => setModal('proof')}
+                  canCreate={!historical}
+                />
+              </>
             ) : (
               <Empty
                 title="No placements available"

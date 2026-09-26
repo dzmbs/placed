@@ -666,6 +666,21 @@
   font-size: 16px;
   font-weight: 500;
 }
+.mp-upload.dragging {
+  background: #e5f2c5;
+  border-color: #799654;
+}
+.mp-logo-preview .mp-section-heading h2,
+.mp-preview-remove {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.mp-logo-preview .mp-section-heading {
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 12px;
+}
 .mp-upload small {
   font-size: 14px;
 }

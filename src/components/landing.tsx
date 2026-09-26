@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import {
   ArrowRight,
+  Clock3 as ClockIcon,
   ArrowUpRight,
   Box,
   ChevronDown,
@@ -15,6 +16,7 @@ import {
 } from 'lucide-react';
 import { sales, type SaleEvidence } from '@/lib/why-evidence';
 import { EvidenceCarousel } from '@/components/evidence-carousel';
+import HeroShowcase from './hero-showcase';
 import { MarketNav } from '@/components/market-ui';
 import '@/app/why/why.css';
 
@@ -120,28 +122,7 @@ export default function WhyPage() {
       <MarketNav />
 
       <main>
-        <header className="why-hero">
-          <div className="why-kicker">A MARKETPLACE FOR YOUR WORLD</div>
-          <h1>
-            Ad space, from outfits
-            <br />
-            <span>to billboards.</span>
-          </h1>
-          <div className="why-hero-bottom">
-            <p>
-              List physical or digital ad space. Brands choose a placement, bid on a campaign and
-              upload their artwork.
-            </p>
-            <div className="why-hero-actions">
-              <Link className="why-button" href="/explore">
-                Explore ad space <ArrowRight size={17} />
-              </Link>
-              <a className="why-secondary-link" href="#how-it-works">
-                See how it works
-              </a>
-            </div>
-          </div>
-        </header>
+        <HeroShowcase />
 
         <nav className="why-chapters" aria-label="Page sections">
           <a href="#evidence">
@@ -161,7 +142,7 @@ export default function WhyPage() {
         <section className="why-section" id="evidence" aria-labelledby="evidence-title">
           <div className="why-section-heading">
             <div>
-              <div className="why-kicker">01 / EXAMPLES</div>
+              <div className="why-kicker">Campaign examples</div>
               <h2 id="evidence-title">Campaigns that show the demand.</h2>
             </div>
           </div>
@@ -206,42 +187,38 @@ export default function WhyPage() {
               Timelines refer to sales, not ad display periods. Unknown durations are marked.
               Amounts use their original currencies.
             </div>
-            <div
-              className="why-table-scroll"
-              role="region"
-              aria-label="Campaign evidence table"
-              tabIndex={0}
-            >
-              <table className="why-table">
-                <thead>
-                  <tr>
-                    <th scope="col">Campaign</th>
-                    <th scope="col">Amount & basis</th>
-                    <th scope="col">Timeline</th>
-                    <th scope="col">Source notes</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {sales.map((sale) => (
-                    <tr key={sale.id}>
-                      <th scope="row">
-                        <strong>{sale.creator}</strong>
-                        <span>{sale.surface}</span>
-                        <SourceLinks sale={sale} />
-                      </th>
-                      <td>
-                        <strong className="why-table-amount">{sale.amount}</strong>
-                        <span>{sale.basis}</span>
-                      </td>
-                      <td>
-                        <strong>{sale.timing}</strong>
-                        <span>{sale.timingNote}</span>
-                      </td>
-                      <td>{sale.note}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="why-research-grid">
+              {sales.map((sale) => (
+                <details className="why-research-item" key={sale.id}>
+                  <summary>
+                    <span className="why-research-thumb" aria-hidden="true">
+                      {sale.featuredImage || sale.screenshot ? (
+                        <img src={sale.featuredImage || sale.screenshot} alt="" loading="lazy" />
+                      ) : (
+                        sale.creator.slice(0, 1)
+                      )}
+                    </span>
+                    <span className="why-research-name">
+                      <strong>{sale.creator}</strong>
+                      <span>{sale.surface}</span>
+                    </span>
+                    <span className="why-research-result">
+                      <strong>{sale.amount}</strong>
+                      <span>{sale.basis}</span>
+                    </span>
+                    <ChevronDown size={16} />
+                  </summary>
+                  <div className="why-research-expanded">
+                    <div className="why-research-timing">
+                      <ClockIcon />
+                      <strong>{sale.timing}</strong>
+                    </div>
+                    <p>{sale.timingNote}</p>
+                    <p>{sale.note}</p>
+                    <SourceLinks sale={sale} />
+                  </div>
+                </details>
+              ))}
             </div>
           </details>
         </section>
@@ -249,7 +226,7 @@ export default function WhyPage() {
         <section className="why-section" id="how-it-works" aria-labelledby="product-title">
           <div className="why-section-heading">
             <div>
-              <div className="why-kicker">02 / THE PRODUCT</div>
+              <div className="why-kicker">How it works</div>
               <h2 id="product-title">How a campaign works</h2>
             </div>
           </div>
@@ -274,7 +251,7 @@ export default function WhyPage() {
         <section className="why-section why-onchain" id="onchain" aria-labelledby="onchain-title">
           <div className="why-section-heading">
             <div>
-              <div className="why-kicker">03 / PAYMENTS AND OWNERSHIP</div>
+              <div className="why-kicker">Payments and ownership</div>
               <h2 id="onchain-title">How bids and payments are handled</h2>
             </div>
           </div>
@@ -303,7 +280,7 @@ export default function WhyPage() {
           </div>
           <div className="why-financing">
             <div className="why-financing-copy">
-              <span className="why-financing-tag">OPTIONAL FINANCING</span>
+              <span className="why-financing-tag">Optional financing</span>
               <h3>Sell a share of future ad revenue.</h3>
               <p>
                 Creators choose a percentage and a term. Token holders receive that share of

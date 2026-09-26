@@ -1,7 +1,17 @@
 'use client';
 import Link from 'next/link';
 import { useState } from 'react';
-import { ArrowUpRight, Plus } from 'lucide-react';
+import {
+  ArrowRight,
+  ArrowUpRight,
+  Plus,
+  Wallet,
+  Layers3,
+  MousePointer2,
+  LayoutGrid,
+  ShieldCheck,
+  Activity,
+} from 'lucide-react';
 import { campaignStatus, dateLabel, display, mulDiv, redemptionReady, topBid } from '@/lib/market';
 import { useMarket } from './market-provider';
 import {
@@ -46,308 +56,408 @@ export default function MarketPortfolio({ initialTab = 'holdings' }: { initialTa
       />
       {user ? (
         <>
-          <div className="mp-balance-grid">
-            <div>
-              <span>Available balance</span>
+          <div className="mp-dashboard-summary">
+            <section className="mp-account-card">
+              <div className="mp-section-heading">
+                <span>
+                  <Wallet size={17} /> Wallet balance
+                </span>
+                <span className="mp-network-pill">Sepolia</span>
+              </div>
               <strong>
                 {display(user.usdc)} <small>USDC</small>
               </strong>
-            </div>
-            <div>
-              <span>Available to withdraw</span>
-              <strong>
-                {display(credit)} <small>USDC</small>
-              </strong>
-              {credit > 0 && (
-                <AccessButton
-                  className="mp-button"
-                  onClick={() =>
-                    transact(
-                      'Withdraw outbid funds',
-                      `Withdraw ${display(credit)} USDC from outbid bids to your wallet.`,
-                      { type: 'withdraw' },
-                    )
-                  }
+              <div className="mp-account-bottom">
+                <span>Demo assets · test network</span>
+                <button onClick={wallet}>
+                  Manage wallet <ArrowUpRight size={15} />
+                </button>
+              </div>
+            </section>
+            <div className="mp-overview-stats">
+              {[
+                {
+                  key: 'holdings',
+                  label: 'Revenue positions',
+                  count: holdings.length,
+                  icon: Layers3,
+                },
+                {
+                  key: 'advertising',
+                  label: 'Bids & bookings',
+                  count: bids.length,
+                  icon: MousePointer2,
+                },
+                { key: 'creator', label: 'Your listings', count: owned.length, icon: LayoutGrid },
+              ].map((item) => (
+                <button
+                  key={item.key}
+                  className={tab === item.key ? 'active' : ''}
+                  onClick={() => setTab(item.key)}
                 >
-                  Withdraw funds
-                </AccessButton>
+                  <item.icon size={21} />
+                  <strong>{item.count}</strong>
+                  <span>
+                    {item.label} <ArrowUpRight size={14} />
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="mp-dashboard-layout">
+            <div className="mp-dashboard-positions">
+              <div className="mp-panel-heading">
+                <h2>Your positions</h2>
+                <span>Overview</span>
+              </div>
+              {!user.verified && tab !== 'holdings' && (
+                <div className="mp-inline-note">
+                  <span>Verify your identity to bid or publish a listing.</span>
+                  <button className="mp-button" onClick={verify}>
+                    Verify identity
+                  </button>
+                </div>
               )}
-            </div>
-          </div>
-          {!user.verified && tab !== 'holdings' && (
-            <div className="mp-inline-note">
-              <span>Verify your identity to bid or publish a listing.</span>
-              <button className="mp-button" onClick={verify}>
-                Verify identity
-              </button>
-            </div>
-          )}
-          <div className="mp-tabs">
-            {[
-              ['holdings', 'Revenue tokens'],
-              ['advertising', 'Bids & bookings'],
-              ['creator', 'My listings'],
-            ].map(([key, label]) => (
-              <button
-                key={key}
-                aria-pressed={tab === key}
-                className={tab === key ? 'active' : ''}
-                onClick={() => setTab(key)}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-          {tab === 'holdings' &&
-            (holdings.length ? (
-              <div className="mp-stack">
-                {holdings.map((asset) => {
-                  const f = asset.financing!,
-                    tokens = f.holdings[user.id] ?? 0,
-                    ready = redemptionReady(state, asset),
-                    redeemed = tokens === 0 && f.redemptions?.[user.id] !== undefined,
-                    unclaimed = f.bids.filter((b) => b.user === user.id && !b.claimed),
-                    covered = state.campaigns.filter((c) => c.series === f.id),
-                    settled = covered.filter((c) =>
-                      ['completed', 'refunded', 'no-sale'].includes(c.status),
-                    );
-                  return (
-                    <section className="mp-box" key={asset.id}>
-                      <div className="mp-section-heading">
-                        <div>
-                          <span className="mp-eyebrow">{f.symbol}</span>
-                          <h2>{f.name}</h2>
-                        </div>
-                        <Badge tone={ready ? 'green' : 'amber'}>
-                          {redeemed
-                            ? 'Redeemed'
-                            : ready
-                              ? 'Redemption open'
-                              : state.now >= f.end
-                                ? 'Awaiting settlement'
-                                : f.status === 'active'
-                                  ? 'Term active'
-                                  : {
-                                      fundraising: 'Token sale open',
-                                      migration: 'Awaiting activation',
-                                      failed: 'Sale unsuccessful',
-                                      deadline: 'Activation expired',
-                                    }[f.status]}
-                        </Badge>
-                      </div>
-                      <div className="mp-holdings-grid">
-                        <div>
-                          <span>Your tokens</span>
-                          <strong>
-                            {display(tokens)} {f.symbol}
-                          </strong>
-                        </div>
-                        <div>
-                          <span>Revenue available</span>
-                          <strong>{display(f.vault)} USDC</strong>
-                        </div>
-                        <div>
-                          <span>{redeemed ? 'Redeemed' : 'Your share to date'}</span>
-                          <strong>
-                            {display(
-                              redeemed
-                                ? f.redemptions![user.id]
-                                : f.remainingSupply
-                                  ? mulDiv(f.vault, tokens, f.remainingSupply)
-                                  : 0,
-                              6,
-                            )}{' '}
-                            USDC
-                          </strong>
-                        </div>
-                      </div>
-                      <Rows
-                        rows={[
-                          ['Revenue term ends', dateLabel(f.end)],
-                          ['Campaigns settled', `${settled.length} / ${covered.length}`],
-                        ]}
-                      />
-                      {redeemed ? (
-                        <p className="mp-note green">
-                          Revenue paid to your wallet. These tokens have been burned.
-                        </p>
-                      ) : ready && tokens > 0 ? (
-                        <AccessButton
-                          onClick={() =>
-                            transact(
-                              'Redeem revenue tokens',
-                              `Redeem ${display(tokens)} ${f.symbol} for your share of the collected revenue. These tokens will be burned.`,
-                              { type: 'redeem', assetId: asset.id },
-                            )
-                          }
-                        >
-                          Redeem {display(tokens)} {f.symbol}
-                        </AccessButton>
-                      ) : (
-                        <p className="mp-note">
-                          Redeem after the revenue term ends and all campaigns settle.
-                        </p>
-                      )}
-                      {unclaimed.length > 0 && (
-                        <div className="mp-inline-note">
-                          <span>
-                            {display(unclaimed.reduce((sum, b) => sum + b.budget, 0))} USDC{' '}
-                            {f.status === 'fundraising'
-                              ? 'committed to the token sale'
-                              : 'awaiting claim'}
-                          </span>
-                          {f.status !== 'fundraising' && (
+              <div className="mp-tabs">
+                {[
+                  ['holdings', 'Revenue tokens'],
+                  ['advertising', 'Bids & bookings'],
+                  ['creator', 'My listings'],
+                ].map(([key, label]) => (
+                  <button
+                    key={key}
+                    aria-pressed={tab === key}
+                    className={tab === key ? 'active' : ''}
+                    onClick={() => setTab(key)}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              {tab === 'holdings' &&
+                (holdings.length ? (
+                  <div className="mp-stack">
+                    {holdings.map((asset) => {
+                      const f = asset.financing!,
+                        tokens = f.holdings[user.id] ?? 0,
+                        ready = redemptionReady(state, asset),
+                        redeemed = tokens === 0 && f.redemptions?.[user.id] !== undefined,
+                        unclaimed = f.bids.filter((b) => b.user === user.id && !b.claimed),
+                        covered = state.campaigns.filter((c) => c.series === f.id),
+                        settled = covered.filter((c) =>
+                          ['completed', 'refunded', 'no-sale'].includes(c.status),
+                        );
+                      return (
+                        <section className="mp-box" key={asset.id}>
+                          <div className="mp-section-heading">
+                            <div>
+                              <span className="mp-eyebrow">{f.symbol}</span>
+                              <h2>{f.name}</h2>
+                            </div>
+                            <Badge tone={ready ? 'green' : 'amber'}>
+                              {redeemed
+                                ? 'Redeemed'
+                                : ready
+                                  ? 'Redemption open'
+                                  : state.now >= f.end
+                                    ? 'Awaiting settlement'
+                                    : f.status === 'active'
+                                      ? 'Term active'
+                                      : {
+                                          fundraising: 'Token sale open',
+                                          migration: 'Awaiting activation',
+                                          failed: 'Sale unsuccessful',
+                                          deadline: 'Activation expired',
+                                        }[f.status]}
+                            </Badge>
+                          </div>
+                          <div className="mp-holdings-grid">
+                            <div>
+                              <span>Your tokens</span>
+                              <strong>
+                                {display(tokens)} {f.symbol}
+                              </strong>
+                            </div>
+                            <div>
+                              <span>Revenue available</span>
+                              <strong>{display(f.vault)} USDC</strong>
+                            </div>
+                            <div>
+                              <span>{redeemed ? 'Redeemed' : 'Your share to date'}</span>
+                              <strong>
+                                {display(
+                                  redeemed
+                                    ? f.redemptions![user.id]
+                                    : f.remainingSupply
+                                      ? mulDiv(f.vault, tokens, f.remainingSupply)
+                                      : 0,
+                                  6,
+                                )}{' '}
+                                USDC
+                              </strong>
+                            </div>
+                          </div>
+                          <Rows
+                            rows={[
+                              ['Revenue term ends', dateLabel(f.end)],
+                              ['Campaigns settled', `${settled.length} / ${covered.length}`],
+                            ]}
+                          />
+                          {redeemed ? (
+                            <p className="mp-note green">
+                              Revenue paid to your wallet. These tokens have been burned.
+                            </p>
+                          ) : ready && tokens > 0 ? (
                             <AccessButton
                               onClick={() =>
                                 transact(
-                                  'Claim sale allocation',
-                                  'Claim purchased tokens and any unspent budget. Failed sales refund the full budget.',
-                                  { type: 'sale-claim', assetId: asset.id },
+                                  'Redeem revenue tokens',
+                                  `Redeem ${display(tokens)} ${f.symbol} for your share of the collected revenue. These tokens will be burned.`,
+                                  { type: 'redeem', assetId: asset.id },
                                 )
                               }
                             >
-                              Claim allocation
+                              Redeem {display(tokens)} {f.symbol}
                             </AccessButton>
+                          ) : (
+                            <p className="mp-note">
+                              Redeem after the revenue term ends and all campaigns settle.
+                            </p>
                           )}
-                        </div>
-                      )}
-                      <div className="mp-actions">
-                        <Link
-                          className="mp-button"
-                          href={`/assets/${asset.id}?tab=${f.status === 'active' ? 'trade' : 'invest'}`}
-                        >
-                          {f.status === 'active' ? 'Trade tokens' : 'View token sale'}{' '}
-                          <ArrowUpRight size={17} />
-                        </Link>
-                      </div>
-                    </section>
-                  );
-                })}
-              </div>
-            ) : (
-              <Empty
-                title="No revenue tokens yet"
-                text="Browse token sales or trade tokens from listed creators."
-                href="/explore"
-              />
-            ))}
-          {tab === 'advertising' && (
-            <div className="mp-stack">
-              {bids.length ? (
-                bids.map((c) => {
-                  const asset = state.assets.find((a) => a.id === c.assetId),
-                    winner = topBid(c);
-                  if (!asset) return null;
-                  return (
-                    <section className="mp-box" key={c.id}>
-                      <div className="mp-section-heading">
-                        <h3>
-                          {asset.name} · {asset.draft.spots.find((s) => s.id === c.slotId)?.name}
-                        </h3>
-                        <Badge tone={winner?.user === user.id ? 'green' : 'amber'}>
-                          {winner?.user === user.id
-                            ? c.status === 'open'
-                              ? 'Highest bidder'
-                              : campaignStatus(c, state.now)
-                            : 'Outbid'}
-                        </Badge>
-                      </div>
-                      <Rows
-                        rows={[
-                          [
-                            'Your latest bid',
-                            `${display(c.bids.filter((b) => b.user === user.id).at(-1)!.amount)} USDC`,
-                          ],
-                          ['Payment held', `${display(c.held)} USDC`],
-                          ['Display ends', dateLabel(c.end)],
-                        ]}
-                      />
-                      <Link
-                        className="mp-button"
-                        href={`/assets/${encodeURIComponent(asset.id)}?${new URLSearchParams({ slot: c.slotId, campaign: c.id, tab: 'advertise' })}`}
-                      >
-                        View booking & artwork <ArrowUpRight size={17} />
-                      </Link>
-                    </section>
-                  );
-                })
-              ) : (
-                <Empty
-                  title="No bids yet"
-                  text="Find an ad placement and place a bid."
-                  href="/explore"
-                />
-              )}
-            </div>
-          )}
-          {tab === 'creator' &&
-            (owned.length ? (
-              <div className="mp-stack">
-                {owned.map((asset) => (
-                  <section className="mp-box" key={asset.id}>
-                    <div className="mp-section-heading">
-                      <div>
-                        {asset.ens && <span className="mp-eyebrow">{asset.ens}</span>}
-                        <h2>{asset.name}</h2>
-                      </div>
-                    </div>
-                    <p className="mp-muted">{asset.description}</p>
-                    <div className="mp-campaign-links">
-                      {asset.draft.spots.map((slot) => {
-                        const c = state.campaigns
-                          .filter((c) => c.assetId === asset.id && c.slotId === slot.id)
-                          .at(-1);
-                        return (
-                          <Link key={slot.id} href={`/assets/${asset.id}?slot=${slot.id}`}>
-                            <span>
-                              <strong>{slot.name}</strong>
-                              <small>{c ? campaignStatus(c, state.now) : 'No campaign'}</small>
-                            </span>
-                            <span>
-                              {c ? `${display(c.held)} USDC held` : 'Create campaign'}{' '}
-                              <ArrowUpRight size={16} />
-                            </span>
-                          </Link>
-                        );
-                      })}
-                    </div>
-                  </section>
-                ))}
-              </div>
-            ) : (
-              <Empty
-                title="No listings yet"
-                text="Add your ad space and placements in Studio, then publish your listing."
-                href="/studio"
-                action="List ad space"
-              />
-            ))}
-          {state.receipts.some((receipt) => receipt.user === user.id) && (
-            <section className="mp-box mp-activity">
-              <h3>Recent activity</h3>
-              {state.receipts
-                .filter((r) => r.user === user.id)
-                .slice(0, 8)
-                .map((r) => (
-                  <div key={r.id}>
-                    <span>
-                      {r.title.replaceAll('-', ' ')}
-                      {/^0x[a-fA-F0-9]{64}$/.test(r.id) && (
-                        <a
-                          className="mp-transaction-link"
-                          href={`https://sepolia.etherscan.io/tx/${r.id}`}
-                          target="_blank"
-                          rel="noreferrer"
-                        >
-                          View transaction ↗
-                        </a>
-                      )}
-                    </span>
-                    <small>{dateLabel(r.at)}</small>
+                          {unclaimed.length > 0 && (
+                            <div className="mp-inline-note">
+                              <span>
+                                {display(unclaimed.reduce((sum, b) => sum + b.budget, 0))} USDC{' '}
+                                {f.status === 'fundraising'
+                                  ? 'committed to the token sale'
+                                  : 'awaiting claim'}
+                              </span>
+                              {f.status !== 'fundraising' && (
+                                <AccessButton
+                                  onClick={() =>
+                                    transact(
+                                      'Claim sale allocation',
+                                      'Claim purchased tokens and any unspent budget. Failed sales refund the full budget.',
+                                      { type: 'sale-claim', assetId: asset.id },
+                                    )
+                                  }
+                                >
+                                  Claim allocation
+                                </AccessButton>
+                              )}
+                            </div>
+                          )}
+                          <div className="mp-actions">
+                            <Link
+                              className="mp-button"
+                              href={`/assets/${asset.id}?tab=${f.status === 'active' ? 'trade' : 'invest'}`}
+                            >
+                              {f.status === 'active' ? 'Trade tokens' : 'View token sale'}{' '}
+                              <ArrowUpRight size={17} />
+                            </Link>
+                          </div>
+                        </section>
+                      );
+                    })}
                   </div>
+                ) : (
+                  <PortfolioEmpty
+                    title="No revenue tokens yet"
+                    text="Browse token sales or trade tokens from listed creators."
+                    href="/explore"
+                  />
                 ))}
-            </section>
-          )}
+              {tab === 'advertising' && (
+                <div className="mp-stack">
+                  {bids.length ? (
+                    bids.map((c) => {
+                      const asset = state.assets.find((a) => a.id === c.assetId),
+                        winner = topBid(c);
+                      if (!asset) return null;
+                      return (
+                        <section className="mp-box" key={c.id}>
+                          <div className="mp-section-heading">
+                            <h3>
+                              {asset.name} ·{' '}
+                              {asset.draft.spots.find((s) => s.id === c.slotId)?.name}
+                            </h3>
+                            <Badge tone={winner?.user === user.id ? 'green' : 'amber'}>
+                              {winner?.user === user.id
+                                ? c.status === 'open'
+                                  ? 'Highest bidder'
+                                  : campaignStatus(c, state.now)
+                                : 'Outbid'}
+                            </Badge>
+                          </div>
+                          <Rows
+                            rows={[
+                              [
+                                'Your latest bid',
+                                `${display(c.bids.filter((b) => b.user === user.id).at(-1)!.amount)} USDC`,
+                              ],
+                              ['Payment held', `${display(c.held)} USDC`],
+                              ['Display ends', dateLabel(c.end)],
+                            ]}
+                          />
+                          <Link
+                            className="mp-button"
+                            href={`/assets/${encodeURIComponent(asset.id)}?${new URLSearchParams({ slot: c.slotId, campaign: c.id, tab: 'advertise' })}`}
+                          >
+                            View booking & artwork <ArrowUpRight size={17} />
+                          </Link>
+                        </section>
+                      );
+                    })
+                  ) : (
+                    <PortfolioEmpty
+                      title="No bids yet"
+                      text="Find an ad placement and place a bid."
+                      href="/explore"
+                    />
+                  )}
+                </div>
+              )}
+              {tab === 'creator' &&
+                (owned.length ? (
+                  <div className="mp-stack">
+                    {owned.map((asset) => (
+                      <section className="mp-box" key={asset.id}>
+                        <div className="mp-section-heading">
+                          <div>
+                            {asset.ens && <span className="mp-eyebrow">{asset.ens}</span>}
+                            <h2>{asset.name}</h2>
+                          </div>
+                        </div>
+                        <p className="mp-muted">{asset.description}</p>
+                        <div className="mp-campaign-links">
+                          {asset.draft.spots.map((slot) => {
+                            const c = state.campaigns
+                              .filter((c) => c.assetId === asset.id && c.slotId === slot.id)
+                              .at(-1);
+                            return (
+                              <Link key={slot.id} href={`/assets/${asset.id}?slot=${slot.id}`}>
+                                <span>
+                                  <strong>{slot.name}</strong>
+                                  <small>{c ? campaignStatus(c, state.now) : 'No campaign'}</small>
+                                </span>
+                                <span>
+                                  {c ? `${display(c.held)} USDC held` : 'Create campaign'}{' '}
+                                  <ArrowUpRight size={16} />
+                                </span>
+                              </Link>
+                            );
+                          })}
+                        </div>
+                      </section>
+                    ))}
+                  </div>
+                ) : (
+                  <PortfolioEmpty
+                    title="No listings yet"
+                    text="Add your ad space and placements in Studio, then publish your listing."
+                    href="/studio"
+                    action="List ad space"
+                  />
+                ))}
+            </div>
+            <aside className="mp-dashboard-sidebar">
+              <section className="mp-dashboard-panel">
+                <div className="mp-panel-heading">
+                  <h2>Ready to withdraw</h2>
+                  <Wallet size={17} />
+                </div>
+                <strong className="mp-withdraw-amount">
+                  {display(credit)} <small>USDC</small>
+                </strong>
+                <p>Funds returned from bids you were outbid on.</p>
+                {credit > 0 ? (
+                  <AccessButton
+                    className="mp-button primary full"
+                    onClick={() =>
+                      transact(
+                        'Withdraw outbid funds',
+                        `Withdraw ${display(credit)} USDC from outbid bids to your wallet.`,
+                        { type: 'withdraw' },
+                      )
+                    }
+                  >
+                    Withdraw funds <ArrowUpRight size={16} />
+                  </AccessButton>
+                ) : (
+                  <span className="mp-subtle-status">Nothing to withdraw right now</span>
+                )}
+              </section>
+              <section className="mp-dashboard-panel">
+                <div className="mp-panel-heading">
+                  <h2>Recent activity</h2>
+                  <Activity size={17} />
+                </div>
+                {state.receipts.some((r) => r.user === user.id) ? (
+                  <div className="mp-dashboard-activity">
+                    {state.receipts
+                      .filter((r) => r.user === user.id)
+                      .slice(0, 5)
+                      .map((r) => (
+                        <div key={r.id}>
+                          <span className="mp-activity-dot" />
+                          <div>
+                            <strong>{r.title.replaceAll('-', ' ')}</strong>
+                            <small>{dateLabel(r.at)}</small>
+                            {/^0x[a-fA-F0-9]{64}$/.test(r.id) && (
+                              <a
+                                href={`https://sepolia.etherscan.io/tx/${r.id}`}
+                                target="_blank"
+                                rel="noreferrer"
+                              >
+                                View transaction ↗
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                ) : (
+                  <div className="mp-activity-placeholder">
+                    <Activity size={28} />
+                    <p>Your next move starts here.</p>
+                    <small>Bids, listings and transactions will appear as you go.</small>
+                  </div>
+                )}
+              </section>
+              {!user.verified && (
+                <section className="mp-identity-card">
+                  <ShieldCheck size={21} />
+                  <div>
+                    <strong>One person. More possibilities.</strong>
+                    <p>Verify with World to bid and publish.</p>
+                    <button onClick={verify}>
+                      Verify identity <ArrowRight size={14} />
+                    </button>
+                  </div>
+                </section>
+              )}
+            </aside>
+          </div>
+          <div className="mp-portfolio-paths">
+            <Link href="/explore">
+              <MousePointer2 size={24} />
+              <div>
+                <span>For brands</span>
+                <h3>Find your next placement</h3>
+                <p>Put your brand where people look.</p>
+              </div>
+              <ArrowUpRight size={22} />
+            </Link>
+            <Link href="/studio">
+              <LayoutGrid size={24} />
+              <div>
+                <span>For creators</span>
+                <h3>Make room for a brand</h3>
+                <p>Turn your everyday space into ad space.</p>
+              </div>
+              <ArrowUpRight size={22} />
+            </Link>
+          </div>
         </>
       ) : (
         <div className="mp-empty">
@@ -359,5 +469,18 @@ export default function MarketPortfolio({ initialTab = 'holdings' }: { initialTa
         </div>
       )}
     </MarketShell>
+  );
+}
+
+function PortfolioEmpty(props: React.ComponentProps<typeof Empty>) {
+  return (
+    <div className="mp-portfolio-empty">
+      <div className="mp-empty-art" aria-hidden="true">
+        <span />
+        <Layers3 size={38} strokeWidth={1.2} />
+        <span />
+      </div>
+      <Empty {...props} />
+    </div>
   );
 }

@@ -39,10 +39,18 @@ export function MarketNav() {
   );
 }
 export function MarketWalletButton() {
-  const { state, wallet, busy } = useMarket();
+  const { state, wallet, walletOpen, busy } = useMarket();
   const active = state?.people.find((p) => p.id === state.current);
   return (
-    <button className="mp-button wallet" onClick={wallet} disabled={busy}>
+    <button
+      className="mp-button wallet"
+      data-wallet-trigger
+      aria-haspopup="dialog"
+      aria-expanded={walletOpen}
+      aria-controls={walletOpen ? 'wallet-details' : undefined}
+      onClick={wallet}
+      disabled={busy}
+    >
       <Wallet size={17} />
       <span>
         {busy

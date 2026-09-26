@@ -594,13 +594,6 @@ p {
   align-items: center;
   gap: 6px;
 }
-.stage-kicker > span {
-  width: 4px;
-  height: 4px;
-  background: #cae88f;
-  border-radius: 50%;
-  box-shadow: 0 0 6px #ccea7a66;
-}
 .stage-top h2 {
   font-family: 'Manrope', sans-serif;
   font-weight: 450;

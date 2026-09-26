@@ -22,6 +22,7 @@ import {
   Copy,
 } from 'lucide-react';
 import { createPortal } from 'react-dom';
+import { WalletPopover } from './wallet-popover';
 import { friendlyMarketError, type TransactionProgress } from '@/lib/marketplace/progress';
 import { display, type MarketAction, type MarketState } from '@/lib/market';
 import {
@@ -53,6 +54,7 @@ type Context = {
     onSuccess?: () => void,
   ) => void;
   wallet: () => void;
+  walletOpen: boolean;
   connect: () => Promise<boolean>;
   ensureAccess: (verified: boolean) => Promise<boolean>;
   verify: () => Promise<boolean>;
@@ -172,6 +174,7 @@ export function MarketProvider({
   const [transaction, setTransaction] = useState<Transaction | null>(null);
   const [txError, setTxError] = useState('');
   const [toast, setToast] = useState('');
+  const [sessionBusy, setSessionBusy] = useState(false);
   const [progress, setProgress] = useState<TransactionProgress | null>(null);
   useEffect(() => {
     const changed = (event: Event) => {
@@ -263,6 +266,7 @@ export function MarketProvider({
     pending.current = true;
     generation.current++;
     setBusy(true);
+    setSessionBusy(true);
     setProgress({
       phase: 'wallet',
       label:
@@ -293,7 +297,10 @@ export function MarketProvider({
       return false;
     } finally {
       pending.current = false;
-      if (mounted.current) setBusy(false);
+      if (mounted.current) {
+        setBusy(false);
+        setSessionBusy(false);
+      }
     }
   };
   const connect = async () => (current.current?.current ? true : session('connect'));
@@ -309,7 +316,8 @@ export function MarketProvider({
     pending.current = true;
     generation.current++;
     setBusy(true);
-    setProgress({ phase: 'preparing', label: 'Disconnecting your wallet' });
+    setSessionBusy(true);
+    setProgress(null);
     try {
       const next = await client.disconnect();
       if (!mounted.current) return;
@@ -320,12 +328,15 @@ export function MarketProvider({
       if (mounted.current) setWalletError('Could not disconnect. Please try again.');
     } finally {
       pending.current = false;
-      if (mounted.current) setBusy(false);
+      if (mounted.current) {
+        setBusy(false);
+        setSessionBusy(false);
+      }
     }
   };
   const wallet = () => {
     setWalletError('');
-    if (current.current?.current) setWalletOpen(true);
+    if (current.current?.current) setWalletOpen((open) => !open);
     else void session('connect');
   };
   const transact: Context['transact'] = (title, description, action, onSuccess) => {
@@ -378,7 +389,10 @@ export function MarketProvider({
       }
     } finally {
       pending.current = false;
-      if (mounted.current) setBusy(false);
+      if (mounted.current) {
+        setBusy(false);
+        setSessionBusy(false);
+      }
     }
   };
   const quoteSwap = useCallback(
@@ -400,6 +414,7 @@ export function MarketProvider({
         refresh,
         transact,
         wallet,
+        walletOpen,
         connect,
         disconnect,
         ensureAccess,
@@ -411,11 +426,7 @@ export function MarketProvider({
     >
       {children}
       {walletOpen && (
-        <MarketDialog
-          title={active ? 'Your wallet' : 'Connect wallet'}
-          close={() => setWalletOpen(false)}
-          busy={busy}
-        >
+        <WalletPopover close={() => setWalletOpen(false)}>
           {active && (
             <>
               <div className="mp-wallet-summary">
@@ -432,7 +443,11 @@ export function MarketProvider({
                 <div>
                   <dt>Account</dt>
                   <dd className="mp-wallet-address">
-                    <span>{active.address || active.name}</span>
+                    <span title={active.address || active.name}>
+                      {active.address
+                        ? `${active.address.slice(0, 8)}…${active.address.slice(-6)}`
+                        : active.name}
+                    </span>
                     <button
                       aria-label="Copy wallet address"
                       className="mp-icon"
@@ -525,7 +540,7 @@ export function MarketProvider({
               {busy ? 'Connecting…' : 'Connect wallet'}
             </button>
           )}
-        </MarketDialog>
+        </WalletPopover>
       )}
       {transaction && (
         <MarketDialog title={transaction.title} close={() => setTransaction(null)} busy={busy}>
@@ -588,7 +603,7 @@ export function MarketProvider({
           </button>
         </div>
       )}
-      {busy && progress && (
+      {busy && !sessionBusy && progress && (
         <div className="mp-transaction-progress" role="status" aria-live="polite">
           <div className="mp-progress-icon">
             <LoaderCircle className="spin" size={23} />

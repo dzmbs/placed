@@ -1024,10 +1024,7 @@ export default function Studio() {
         >
           <div className="stage-top">
             <div>
-              <span className="stage-kicker">
-                <span />
-                INTERACTIVE 3D
-              </span>
+              <span className="stage-kicker">INTERACTIVE 3D</span>
               <h2>
                 {draft.assetName || asset?.name || 'Your canvas'}
                 <span>

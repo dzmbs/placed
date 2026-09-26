@@ -15,6 +15,10 @@ Use a fresh test wallet and a `0x`-prefixed private key. Fund that wallet with S
 
 Creator, advertiser and investor interactions use Privy-connected wallets. Set `NEXT_PUBLIC_PRIVY_APP_ID` and allow `APP_ORIGIN` in the Privy dashboard. The browser needs no Privy app secret. Privy handles external-wallet selection and optional email-created embedded wallets; viem submits through the selected Privy provider on Sepolia. Their keys do not belong in the server environment. The backend uses `PRIVATE_KEY` to issue participant authorizations after World verification, and a separate `PROOF_SIGNER_PRIVATE_KEY` for matched-photo releases. Both signers must match the deployed `AuctionHouse`.
 
+## Privy origin setup
+
+Use `http://127.0.0.1:3000` for this project's local server and add that exact origin in Privy Dashboard → Configuration → App settings → Domains. `http://localhost:3000` is a different browser origin even when it points to the same machine. A blocked `auth.privy.io` frame or session 403 means the current origin is not permitted; editing Next.js headers cannot change Privy's `frame-ancestors` policy. Keep existing allowed origins and add the local one. The wallet UI offers a retry after startup times out.
+
 ## World ID
 
 Set `NEXT_PUBLIC_WORLD_APP_ID`, `WORLD_RP_ID`, `WORLD_SIGNING_KEY`, `WORLD_ENVIRONMENT` and `WORLD_ACTION` from your World Developer Portal configuration. This implementation uses IDKit 4.3.0, v4 requests and Proof of Human, with the documented legacy Orb fallback enabled. The default environment is `staging`; use the environment configured for your app and testing credential.

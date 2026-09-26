@@ -292,6 +292,13 @@
 .walletAccount {
   position: relative;
 }
+.walletStartupError {
+  max-width: 320px;
+  margin-top: 10px;
+  color: #854327;
+  font-size: 12px;
+  line-height: 1.5;
+}
 .walletMenu {
   position: absolute;
   right: 0;

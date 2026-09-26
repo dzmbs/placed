@@ -22,7 +22,7 @@ Open the [marketplace](http://127.0.0.1:3000/marketplace) or [3D studio](http://
 
 For image-to-3D, set `TRIPO_API_KEY` and `GENERATION_ENABLED=true`. The standalone studio also supports Meshy. Generation uses provider credits. `OPENAI_API_KEY` enables proof-photo matching.
 
-Set `NEXT_PUBLIC_PRIVY_APP_ID` and allow your app origin in the Privy dashboard for wallet connection. A Privy app secret is not used by the browser.
+Set `NEXT_PUBLIC_PRIVY_APP_ID` and allow the exact origin `http://127.0.0.1:3000` in the Privy dashboard for wallet connection. `localhost` and `127.0.0.1` are separate origins. A Privy app secret is not used by the browser.
 
 Publishing and advertising bids require backend-verified World Proof of Human and a connected Sepolia wallet. Configure World credentials and contract signers using [the integration guide](docs/integrations.md). Use **Get demo USDC** after connecting. Investors do not need World verification.
 

@@ -1,5 +1,5 @@
 'use client';
-import { useMemo, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import {
   PrivyProvider,
   usePrivy,
@@ -53,6 +53,18 @@ function PrivyMarketplace({ children }: { children: ReactNode }) {
   const [accountOpen, setAccountOpen] = useState(false);
   const [error, setError] = useState('');
   const [disconnecting, setDisconnecting] = useState(false);
+  const [initializationFailed, setInitializationFailed] = useState(false);
+  const [origin, setOrigin] = useState('');
+  const initialized = ready && walletsReady;
+  useEffect(() => {
+    setOrigin(window.location.origin);
+    if (initialized) {
+      setInitializationFailed(false);
+      return;
+    }
+    const timer = setTimeout(() => setInitializationFailed(true), 15000);
+    return () => clearTimeout(timer);
+  }, [initialized]);
   const chooseWallet = ({ wallet }: { wallet: { address: string } }) => {
     setSelected(wallet.address.toLowerCase());
     setAccountOpen(false);
@@ -88,16 +100,28 @@ function PrivyMarketplace({ children }: { children: ReactNode }) {
       walletControl={
         <div className={styles.walletAccount}>
           <button
-            disabled={!ready || !walletsReady || disconnecting}
+            disabled={(!initialized && !initializationFailed) || disconnecting}
             aria-expanded={active ? accountOpen : undefined}
-            onClick={() => (active ? setAccountOpen(!accountOpen) : connectOrCreateWallet())}
+            onClick={() => {
+              if (!initialized) window.location.reload();
+              else if (active) setAccountOpen(!accountOpen);
+              else connectOrCreateWallet();
+            }}
           >
-            {!ready || !walletsReady
-              ? 'Loading wallet…'
+            {!initialized
+              ? initializationFailed
+                ? 'Retry wallet connection'
+                : 'Loading wallet…'
               : active
                 ? `${active.address.slice(0, 6)}…${active.address.slice(-4)}`
                 : 'Connect wallet'}
           </button>
+          {initializationFailed && (
+            <div className={styles.walletStartupError} role="alert">
+              Wallet startup failed. Check your connection and allow <code>{origin}</code> in this
+              Privy app’s Dashboard → Configuration → App settings → Domains, then retry.
+            </div>
+          )}
           {accountOpen && active && (
             <div className={styles.walletMenu}>
               <strong>Your wallet</strong>

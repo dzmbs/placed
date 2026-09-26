@@ -19,6 +19,7 @@
     "verify:models": "node --import tsx scripts/verify_models.ts",
     "check": "npm run format:check && npm run typecheck && npm test && npm run verify:models && npm run build",
     "verify:marketplace": "node --import tsx scripts/verify_marketplace_api.ts",
+    "setup:check": "node --env-file=.env.local --import tsx scripts/check_setup.ts",
     "world:staging": "node --env-file=.env.local --import tsx scripts/world_staging.ts"
   },
   "dependencies": {

@@ -2,6 +2,7 @@ import 'server-only';
 import { DatabaseSync } from 'node:sqlite';
 import { mkdirSync } from 'node:fs';
 import path from 'node:path';
+import { initializeWorldRequests } from '../world-request-store';
 
 let instance: DatabaseSync | undefined;
 export function database() {
@@ -37,5 +38,6 @@ export function database() {
       id TEXT PRIMARY KEY, wallet TEXT NOT NULL, created INTEGER NOT NULL
     );
   `);
+  initializeWorldRequests(instance);
   return instance;
 }

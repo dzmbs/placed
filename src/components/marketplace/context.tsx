@@ -63,6 +63,9 @@ export function MarketplaceProvider({
   const [worldVerified, setWorldVerified] = useState(false);
   const worldError = useRef<string>('');
   const worldAccepted = useRef(false);
+  // Set after an attempt that may have produced a proof; the next request must
+  // carry a new nonce or World answers duplicate_nonce.
+  const worldNeedsFresh = useRef(false);
   const authorization = useRef<ParticipantAuthorization | undefined>(undefined);
   const verification = useRef<{ resolve: () => void; reject: (error: Error) => void } | undefined>(
     undefined,
@@ -164,11 +167,24 @@ export function MarketplaceProvider({
       setNotice('Human verification and wallet authorization completed. Publishing is ready.');
       return;
     }
+    const fresh = worldNeedsFresh.current;
     const request = await client.api<IDKitRequestConfig & { signal: string }>(
       '/world/request',
-      { method: 'POST' },
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ fresh }),
+      },
       signedSession,
     );
+    worldNeedsFresh.current = false;
+    console.info('[world] request', {
+      wallet,
+      fresh,
+      nonce: request.rp_context.nonce.slice(0, 10),
+      action: request.action,
+      environment: request.environment,
+    });
     worldAccepted.current = false;
     worldError.current = '';
     authorization.current = undefined;
@@ -303,6 +319,8 @@ export function MarketplaceProvider({
                   'World proof verified. Confirm the Sepolia wallet authorization transaction.',
                 );
               } catch (error) {
+                worldNeedsFresh.current = true;
+                console.warn('[world] backend rejected proof', error);
                 worldError.current = friendlyMarketError(error);
                 setNotice(worldError.current);
                 setWorldOpen(false);
@@ -326,11 +344,10 @@ export function MarketplaceProvider({
                 verification.current = undefined;
               }
             }}
-            onError={(code) => {
-              worldError.current ||=
-                code === 'user_rejected'
-                  ? 'You cancelled World verification. No protected action was completed.'
-                  : 'World verification could not be completed. Try again with the correct identity and connected wallet.';
+            onError={(code, debugReport) => {
+              console.warn('[world] widget error', code, debugReport);
+              if (code !== 'user_rejected' && code !== 'cancelled') worldNeedsFresh.current = true;
+              worldError.current ||= worldErrorMessage(code);
               setNotice(worldError.current);
               setWorldOpen(false);
               verification.current?.reject(new Error(worldError.current));
@@ -341,4 +358,30 @@ export function MarketplaceProvider({
       </div>
     </MarketplaceContext.Provider>
   );
+}
+
+function worldErrorMessage(code: string) {
+  switch (code) {
+    case 'user_rejected':
+    case 'verification_rejected':
+    case 'cancelled':
+      return 'You cancelled World verification. No protected action was completed.';
+    case 'nullifier_replayed':
+    case 'max_verifications_reached':
+      return 'This World identity has already verified for this app. Use the wallet it verified, or pick a different identity in the World simulator.';
+    case 'inclusion_proof_pending':
+      return 'This World identity is not ready yet. Wait a few minutes, then try again.';
+    case 'duplicate_nonce':
+    case 'rp_signature_expired':
+    case 'timestamp_too_old':
+      return 'The World request expired or was already used. Try again to get a new one.';
+    case 'invalid_network':
+      return 'World app and this site use different environments. Use the World simulator for staging.';
+    case 'credential_unavailable':
+    case 'world_id_4_not_available':
+    case 'world_id_3_not_available':
+      return 'This World identity has no Proof of Human credential. Pick a verified identity.';
+    default:
+      return `World verification could not be completed (${code}). Try again, and check the browser console for details.`;
+  }
 }

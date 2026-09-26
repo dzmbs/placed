@@ -92,3 +92,21 @@ test('a rejected faucet is never reported as confirmed', async () => {
     return true;
   });
 });
+
+test('post-confirmation refresh includes the receipt block and keeps it for later reads', async () => {
+  const paths: string[] = [];
+  const adapter = createMarketAdapter(wallet, {
+    ...chain,
+    api: async <T>(path: string) => {
+      paths.push(path);
+      return snapshot() as T;
+    },
+    faucet: async () =>
+      ({ transactionHash: hash, blockNumber: 123n }) as Awaited<ReturnType<typeof chain.faucet>>,
+  });
+  await adapter.execute({ type: 'faucet' }, address);
+  assert.ok(!paths[0].includes('minimumBlock'));
+  assert.equal(new URL(paths.at(-1)!, 'http://test').searchParams.get('minimumBlock'), '123');
+  await adapter.getState();
+  assert.equal(new URL(paths.at(-1)!, 'http://test').searchParams.get('minimumBlock'), '123');
+});

@@ -38,11 +38,24 @@ export interface WalletSession {
   token: string;
   expires: number;
 }
+let confirmedBlock = 0n;
 export async function api<T>(
   path: string,
   init?: RequestInit,
   session?: WalletSession,
 ): Promise<T> {
+  if (
+    (!init?.method || init.method === 'GET') &&
+    confirmedBlock > 0n &&
+    (path.startsWith('/state') ||
+      path.startsWith('/wallet/') ||
+      /^\/assets\/\d+\/launch/.test(path))
+  ) {
+    const url = new URL(path, 'http://local');
+    const requested = BigInt(url.searchParams.get('minimumBlock') || '0');
+    if (requested < confirmedBlock) url.searchParams.set('minimumBlock', String(confirmedBlock));
+    path = `${url.pathname}${url.search}`;
+  }
   const request = {
     ...init,
     headers: { ...init?.headers, ...(session ? { authorization: `Bearer ${session.token}` } : {}) },
@@ -54,7 +67,15 @@ export async function api<T>(
       [429, 502, 503].includes(response.status) &&
       attempt < 2
     ) {
-      await new Promise((resolve) => setTimeout(resolve, 650 * (attempt + 1)));
+      const retryAfter = Number(response.headers.get('retry-after'));
+      await new Promise((resolve) =>
+        setTimeout(
+          resolve,
+          Number.isFinite(retryAfter) && retryAfter > 0
+            ? Math.min(retryAfter, 10) * 1000
+            : 1500 * (attempt + 1),
+        ),
+      );
       continue;
     }
     const body = await response.json();
@@ -110,6 +131,7 @@ async function trackReceipt(hash: Hex, label: string, key: string) {
     );
   if (receipt.status !== 'success')
     throw new Error('The transaction was not successful. Refresh the listing before trying again.');
+  confirmedBlock = receipt.blockNumber > confirmedBlock ? receipt.blockNumber : confirmedBlock;
   reportProgress({
     phase: 'confirmed',
     label: 'Confirmed on Sepolia',

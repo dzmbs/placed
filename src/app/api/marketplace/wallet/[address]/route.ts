@@ -1,48 +1,18 @@
-import { erc20Abi } from 'viem';
 import { walletAddress } from '@/lib/marketplace/server/auth';
-import { publicClient } from '@/lib/marketplace/server/chain';
-import { contracts } from '@/lib/marketplace/config';
-import { auctionHouseAbi } from '@/lib/marketplace/abi/AuctionHouse';
+import { latestBlock, minimumBlock } from '@/lib/marketplace/server/chain';
+import { marketSnapshot } from '@/lib/marketplace/server/snapshot';
 import { failure } from '@/lib/marketplace/server/http';
 export const runtime = 'nodejs';
 export async function GET(
-  _request: Request,
+  request: Request,
   context: RouteContext<'/api/marketplace/wallet/[address]'>,
 ) {
   try {
     const { address } = await context.params;
-    const wallet = walletAddress(address);
-    const [usdc, credit, authorized, owner] = await Promise.all([
-      publicClient.readContract({
-        address: contracts.usdc,
-        abi: erc20Abi,
-        functionName: 'balanceOf',
-        args: [wallet],
-      }),
-      publicClient.readContract({
-        address: contracts.auctionHouse,
-        abi: auctionHouseAbi,
-        functionName: 'withdrawalCredits',
-        args: [wallet],
-      }),
-      publicClient.readContract({
-        address: contracts.auctionHouse,
-        abi: auctionHouseAbi,
-        functionName: 'authorizedParticipants',
-        args: [wallet],
-      }),
-      publicClient.readContract({
-        address: contracts.auctionHouse,
-        abi: auctionHouseAbi,
-        functionName: 'owner',
-      }),
-    ]);
-    return Response.json({
-      usdc: String(usdc),
-      credit: String(credit),
-      authorized,
-      admin: owner.toLowerCase() === wallet.toLowerCase(),
-    });
+    const minimum = minimumBlock(request);
+    const block = await latestBlock(minimum);
+    const snapshot = await marketSnapshot(block, walletAddress(address), minimum);
+    return Response.json(snapshot.wallet, { headers: { 'cache-control': 'no-store' } });
   } catch (error) {
     return failure(error);
   }

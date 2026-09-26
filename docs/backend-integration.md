@@ -10,6 +10,12 @@ Dates use milliseconds in the UI and seconds in contracts. Percentages use basis
 
 An asset may have multiple slots. Campaigns retain their own snapshotted financing terms. One optional asset financing series covers eligible future campaigns across its slots. Redemption uses the vault's aggregate unresolved-campaign gate. Listing an asset never creates a token.
 
+The server keeps deployment-scoped event cursors and decoded history in `data/marketplace.sqlite`. AuctionHouse activity, CCA bids/exits/claims and vault redemptions resume at the next unindexed block after a restart. Streams are shared across wallets and fetched in ranges of at most 500 blocks. A changed checkpoint hash rebuilds the affected stream; failed reads never commit partial history.
+
+Public snapshots and concurrent reads are shared by block hash. AuctionHouse events refresh the affected assets and campaigns; direct ENS edits are picked up by a full refresh every 30 seconds. Active financing state refreshes each block. Wallet balances, allowances and bids have separate cache keys. Contract reads are pinned to the snapshot block. After a confirmed transaction, `minimumBlock` prevents returning an earlier snapshot and forces a full refresh, including ENS. RPC failures have a short retry cooldown instead of causing a burst of identical reads.
+
+Keep `data/marketplace.sqlite` on a persistent volume in deployment. This remains a request-driven MVP index, with the existing 50-asset/500-campaign listing limits. It does not yet replace a dedicated worker and paginated database API for a large marketplace.
+
 ## Transactions
 
 The adapter checks the active account and Sepolia chain before signing. Contract calls are simulated, submitted through the selected Privy wallet, and awaited through Viem receipt tracking. Reverted receipts and wallet cancellation fail explicitly. Replacement tracking follows sped-up transactions and rejects cancelled or replaced operations.
@@ -24,4 +30,4 @@ CCA defaults are 60% sale, 20% liquidity and 20% retained supply, with up to 20%
 
 ## Checks
 
-Run `npm run check` and `npm run verify:marketplace`. Contract fork tests cover the official Sepolia ENSv2 and Uniswap deployments without broadcasting. A full public demo still needs signed CCA, trading and advertising transactions. See [setup](integrations.md) and [demo steps](demo.md).
+Run `npm run check` and `npm run verify:marketplace`. To measure read coalescing against live Sepolia without submitting transactions, run `node --env-file=.env.local --conditions=react-server --import tsx scripts/verify_marketplace_index.ts`. Contract fork tests cover the official Sepolia ENSv2 and Uniswap deployments without broadcasting. A full public demo still needs signed CCA, trading and advertising transactions. See [setup](integrations.md) and [demo steps](demo.md).

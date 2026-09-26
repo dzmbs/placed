@@ -46,9 +46,13 @@ export function createMarketAdapter(wallet: MarketWallet, chain = liveChain): Ma
   >();
   const receipts: Receipt[] = [];
   let completed: { key: string; message: string } | undefined;
+  let minimumBlock = 0n;
   async function getState(): Promise<MarketState> {
     const account = wallet.address();
-    const next = await chain.api<MarketSnapshot>(`/state${account ? `?wallet=${account}` : ''}`);
+    const query = new URLSearchParams();
+    if (account) query.set('wallet', account);
+    if (minimumBlock) query.set('minimumBlock', String(minimumBlock));
+    const next = await chain.api<MarketSnapshot>(`/state${query.size ? `?${query}` : ''}`);
     if (account?.toLowerCase() !== wallet.address()?.toLowerCase()) return getState();
     snapshot = next;
     const state = mapMarketState(next);
@@ -497,6 +501,14 @@ export function createMarketAdapter(wallet: MarketWallet, chain = liveChain): Ma
           title: action.type === 'faucet' ? 'Demo USDC received' : `${action.type} confirmed`,
         });
       completed = { key, message };
+      if (
+        result &&
+        typeof result === 'object' &&
+        'blockNumber' in result &&
+        typeof result.blockNumber === 'bigint' &&
+        result.blockNumber > minimumBlock
+      )
+        minimumBlock = result.blockNumber;
       reportProgress({
         phase: 'refreshing',
         label: 'Updating your asset and balances',

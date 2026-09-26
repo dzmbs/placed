@@ -46,6 +46,15 @@ async function main() {
     assert.equal(world.allow_legacy_proofs, true);
     assert.equal(typeof world.rp_context.signature, 'string');
     assert.ok(!JSON.stringify(world).includes('staging_verification_token'));
+    for (let attempt = 0; attempt < 8; attempt++) {
+      const retry = await send('/world/request', {}, session.token);
+      assert.equal(
+        retry.status,
+        200,
+        'Closing/reopening World must not fill a pending-request queue',
+      );
+      assert.deepEqual(await retry.json(), world);
+    }
     const rejected = await send(
       '/world/verify',
       { result: { nonce: world.rp_context.nonce, environment: 'wrong', responses: [] } },

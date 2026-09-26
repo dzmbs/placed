@@ -2,7 +2,7 @@
 
 Turn bags, clothing, bikes and digital surfaces into ad space. Pick a 3D model or import your own, choose sponsorship spots and preview how a brand's logo looks on them.
 
-Placed is the visual studio for a peer-to-peer advertising marketplace. You can swap outfits, set placement prices, save campaigns locally and export your work. Public listings, auctions and EVM payments are coming later.
+Placed includes a 3D placement editor and marketplace screens for listings, auctions, campaign proof, creator tokens and portfolios. The marketplace expects a wallet/backend adapter; see [backend integration](docs/backend-integration.md). No accounts, balances or transactions are simulated in the product.
 
 Built with Next.js, React Three Fiber and Three.js.
 

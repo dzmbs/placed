@@ -1,0 +1,840 @@
+/* Studio-only layout: a single canvas with floating, translucent tools. */
+.studio-app {
+  max-width: none;
+  padding: 0 20px 16px;
+}
+.studio-app .topbar {
+  min-height: 76px;
+  height: auto;
+  gap: 36px;
+}
+.studio-app .nav-links {
+  align-self: stretch;
+  height: auto;
+  min-height: 76px;
+  gap: 25px;
+}
+.studio-app .nav-links button,
+.studio-app .nav-links a {
+  font-size: 14px;
+  height: auto;
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+}
+.studio-app .nav-right {
+  gap: 14px;
+}
+.studio-app .header-actions {
+  gap: 10px;
+}
+.studio-app .button {
+  font-size: 14px;
+  min-height: 42px;
+}
+.studio-app .modal .button {
+  font-size: 16px;
+  line-height: 1.5;
+  min-height: 50px;
+}
+.studio-app .modal .eyebrow {
+  font-size: 12px;
+  color: #637354;
+}
+.studio-app .modal-heading .icon-button {
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+}
+@media (max-width: 600px) {
+  .studio-app .modal .two-fields {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+  }
+  .studio-app .modal .provider-options {
+    flex-direction: column;
+  }
+  .studio-app .modal .segmented {
+    flex-wrap: wrap;
+  }
+  .studio-app .modal .segmented button {
+    flex-basis: 40%;
+  }
+}
+.studio-app .save-status {
+  font-size: 12px;
+}
+.studio-app .local-badge,
+.studio-app .nav-right > .avatar {
+  display: none;
+}
+.studio-app .campaign-strip {
+  margin: 14px 0;
+  padding: 16px 22px;
+  gap: 26px;
+}
+.studio-app .campaign-strip .step-label,
+.studio-app .campaign-strip .section-label {
+  font-size: 11px;
+  color: #687a55;
+  letter-spacing: 1.15px;
+}
+.studio-app .campaign-strip strong {
+  font-size: 15px;
+}
+.studio-app .strip-deliverables strong {
+  max-width: none;
+  font-size: 14px;
+}
+.studio-app .campaign-strip > .button {
+  font-size: 14px;
+  min-height: 42px;
+}
+.studio-app .workspace {
+  --glass: rgb(23 36 27 / 78%);
+  --glass-line: rgb(196 217 167 / 20%);
+  --glass-text: #edf3e4;
+  --glass-muted: #bac9ac;
+  position: relative;
+  display: block;
+  height: calc(100svh - 192px);
+  min-height: 690px;
+  background: #111b14;
+  isolation: isolate;
+  border-color: #687854;
+}
+.studio-app .stage {
+  position: absolute;
+  inset: 0;
+  min-height: 0;
+  border: 0;
+  border-radius: inherit;
+}
+.studio-app .asset-panel,
+.studio-app .placement-panel {
+  position: absolute;
+  z-index: 4;
+  top: 106px;
+  bottom: 108px;
+  width: 274px;
+  display: flex;
+  flex-direction: column;
+  background: var(--glass);
+  color: var(--glass-text);
+  border: 1px solid var(--glass-line);
+  border-radius: 14px;
+  box-shadow: 0 10px 30px #0003;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  scrollbar-width: thin;
+  scrollbar-color: #61764e transparent;
+}
+.studio-app .asset-panel {
+  left: 20px;
+  padding: 22px 18px;
+  overflow-y: auto;
+}
+.studio-app .placement-panel {
+  right: 20px;
+  width: 312px;
+  overflow: hidden;
+}
+.studio-app .panel-intro h2,
+.studio-app .placement-title h2 {
+  font-size: 19px;
+  line-height: 1.4;
+  color: var(--glass-text);
+}
+.studio-app .panel-intro p,
+.studio-app .import-card p,
+.studio-app .sidebar-note,
+.studio-app .sidebar-note strong,
+.studio-app .wardrobe-note,
+.studio-app .preview-details p,
+.studio-app .preview-details small {
+  font-size: 13px;
+  line-height: 1.65;
+  color: var(--glass-muted);
+}
+.studio-app .workspace .step-label,
+.studio-app .workspace .section-label,
+.studio-app .asset-copy small,
+.studio-app .stage-kicker {
+  font-size: 11px;
+  line-height: 1.5;
+  letter-spacing: 1.15px;
+  color: #bfd29f;
+}
+.studio-app .asset-list {
+  margin-top: 18px;
+  gap: 9px;
+  flex: 0 0 auto;
+  max-height: clamp(220px, 32svh, 330px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: #9eb97a #ffffff08;
+  scrollbar-gutter: stable;
+  padding-right: 5px;
+  border-radius: 8px;
+}
+.studio-app .asset-list:focus-visible {
+  outline: 2px solid #c8dea4;
+  outline-offset: 3px;
+}
+.studio-app .asset-card {
+  flex: 0 0 auto;
+  width: 100%;
+  max-width: none;
+  min-height: 82px;
+  height: auto;
+  padding: 10px;
+  gap: 12px;
+  background: #e3efce0a;
+  border-color: #d1e7b312;
+}
+.studio-app .asset-card:hover,
+.studio-app .human-outfits button:hover {
+  background: #b8d18a20;
+}
+.studio-app .asset-card.selected,
+.studio-app .human-outfits button.chosen {
+  background: #b4d48725;
+  border-color: #c6e69766;
+}
+.studio-app .asset-copy strong {
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--glass-text);
+}
+.studio-app .asset-copy {
+  min-width: 0;
+  gap: 4px;
+}
+.studio-app .asset-check,
+.studio-app .asset-chevron {
+  flex-shrink: 0;
+}
+.studio-app .asset-thumbnail {
+  width: 36px;
+  transform: none;
+  color: #c2d6a5;
+}
+.studio-app .asset-check {
+  background: #c8dea4;
+  color: #304421;
+}
+.studio-app .import-card {
+  padding: 16px 13px;
+  margin-top: 17px;
+  background: #c2dd9b0a;
+  border-color: #b8cf9260;
+}
+.studio-app .import-card strong {
+  font-size: 14px;
+  color: var(--glass-text);
+}
+.studio-app .import-card mark {
+  background: #d7f76a;
+  color: #25351d;
+}
+.studio-app .workspace .button.secondary,
+.studio-app .human-genders button,
+.studio-app .human-outfits button {
+  color: var(--glass-text);
+  border-color: var(--glass-line);
+  background: #c0d59f0d;
+  font-size: 16px;
+}
+.studio-app .workspace .button.secondary:hover {
+  background: #c0d59f24;
+}
+.studio-app .human-genders button.active {
+  background: #b4d48736;
+}
+.studio-app .human-outfits button {
+  min-height: 44px;
+  padding: 8px;
+}
+.studio-app .saved-models-link {
+  display: flex;
+  font-size: 13px;
+  color: #c4d7ad;
+}
+.studio-app .model-export {
+  flex-shrink: 0;
+  margin-top: 20px;
+}
+.studio-app .sidebar-note {
+  margin-top: 18px;
+}
+.studio-app .color-section {
+  margin-top: 22px;
+}
+.studio-app .color-swatches button {
+  width: 27px;
+  height: 27px;
+}
+.studio-app .placement-heading {
+  display: block;
+  flex-shrink: 0;
+  padding: 20px 20px 16px;
+}
+.studio-app .small-number,
+.studio-app .panel-tabs > button > span {
+  font-size: 12px;
+  background: #b8d78b24;
+  color: #d4e6b9;
+}
+.studio-app .panel-tabs {
+  flex-shrink: 0;
+  border-color: var(--glass-line);
+  padding: 0 20px;
+  gap: 20px;
+}
+.studio-app .panel-tabs > button {
+  min-height: 48px;
+  font-size: 16px;
+  color: var(--glass-muted);
+}
+.studio-app .panel-tabs > button.active {
+  color: #e2f6c1;
+}
+.studio-app .placement-content {
+  display: block;
+  padding: 20px;
+  min-height: 0;
+  max-height: none;
+  scrollbar-color: #61764e transparent;
+}
+.studio-app .workspace .field,
+.studio-app .range-row {
+  font-size: 16px;
+  color: var(--glass-muted);
+}
+.studio-app .workspace .field > input,
+.studio-app .workspace .field > textarea,
+.studio-app .workspace .field > select,
+.studio-app .price-input {
+  font-size: 17px;
+  color: var(--glass-text);
+  background: #0d1912a6;
+  border-color: #b5cfa338;
+  border-radius: 8px;
+}
+.studio-app .price-input > input {
+  font-size: 27px;
+  color: var(--glass-text);
+}
+.studio-app .price-input > span,
+.studio-app .price-input > small,
+.studio-app .range-row > span {
+  color: #c0d0ae;
+}
+.studio-app .price-input > small,
+.studio-app .range-row > span,
+.studio-app .available {
+  font-size: 14px;
+}
+.studio-app .spot-controls input[type='range'] {
+  height: 5px;
+  margin: 12px 0 21px;
+  background: #5f7150;
+}
+.studio-app .spot-controls input[type='range']::-webkit-slider-thumb {
+  width: 16px;
+  height: 16px;
+  background: #d7f76a;
+  border-color: #20311d;
+}
+.studio-app .spot-controls input[type='range']::-moz-range-thumb {
+  width: 13px;
+  height: 13px;
+  background: #d7f76a;
+  border-color: #20311d;
+}
+.studio-app .move-button {
+  min-height: 44px;
+  font-size: 16px;
+  color: #c8dfa9;
+}
+.studio-app .logo-drop {
+  min-height: 125px;
+  background: #c5dc9f0c;
+  border-color: #bbd39977;
+  color: #c8dda9;
+}
+.studio-app .logo-drop:hover {
+  background: #c5dc9f20;
+}
+.studio-app .logo-drop strong {
+  font-size: 16px;
+  color: #e1edcf;
+}
+.studio-app .logo-drop small {
+  font-size: 14px;
+  color: var(--glass-muted);
+}
+.studio-app .placement-footer {
+  flex-shrink: 0;
+  padding: 14px 20px;
+  border-color: var(--glass-line);
+}
+.studio-app .placement-footer .button {
+  min-height: 48px;
+  font-size: 16px;
+  background: #d7f76a;
+  color: #25351d;
+}
+.studio-app .placement-footer > span {
+  display: none;
+}
+.studio-app .spot-number {
+  font-size: 12px;
+  width: 32px;
+  height: 32px;
+  color: #daebc4;
+  background: #162319;
+  border-color: var(--glass-line);
+}
+.studio-app .available,
+.studio-app .section-row > button,
+.studio-app .workspace .icon-button {
+  color: #c2d6a5;
+}
+.studio-app .spot-overline > .icon-button {
+  width: 36px;
+  height: 36px;
+}
+.studio-app .spot-list button {
+  padding: 12px;
+  background: #c7e0a511;
+  border-color: var(--glass-line);
+}
+.studio-app .spot-list {
+  display: flex;
+  flex-direction: column;
+}
+.studio-app .spot-list button.selected {
+  background: #b7d68a25;
+  border-color: #c4e49580;
+}
+.studio-app .spot-list strong,
+.studio-app .spot-list b,
+.studio-app .preview-details > strong {
+  font-size: 14px;
+  color: var(--glass-text);
+}
+.studio-app .spot-list small {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--glass-muted);
+}
+.studio-app .preview-spot-title {
+  font-size: 20px;
+  color: var(--glass-text);
+}
+.studio-app .preview-details {
+  border-color: var(--glass-line);
+}
+.studio-app .preview-details .button {
+  font-size: 16px;
+}
+.studio-app .stage-top {
+  top: 24px;
+  left: 26px;
+  right: 24px;
+}
+.studio-app .stage-top h2 {
+  font-size: 25px;
+}
+.studio-app .stage-top h2 > span {
+  font-size: 12px;
+}
+.studio-app .stage-icon {
+  width: 40px;
+  height: 40px;
+}
+.studio-app .stage-tabs {
+  top: 27px;
+  right: 80px;
+  left: auto;
+}
+.studio-app .stage-tabs button {
+  min-height: 40px;
+  font-size: 14px;
+  padding: 9px 13px;
+  color: #bbcdab;
+}
+.studio-app .stage-tabs button.active {
+  color: #edf6df;
+}
+.studio-app .stage-tabs svg,
+.studio-app .camera-toolbar svg {
+  width: 19px;
+  height: 19px;
+}
+.studio-app .stage-bottom {
+  bottom: 22px;
+}
+.studio-app .camera-toolbar {
+  padding: 6px 9px;
+  border-radius: 10px;
+  gap: 6px;
+  background: #263324d9;
+  backdrop-filter: blur(12px);
+}
+.studio-app .camera-toolbar button {
+  min-width: 40px;
+  min-height: 40px;
+  font-size: 14px;
+  padding: 8px 10px;
+  color: #d0dfbe;
+}
+.studio-app .stage-bottom > p {
+  font-size: 13px;
+  color: #b5c7a1;
+}
+.studio-app .stage-stats {
+  left: 27px;
+  bottom: 24px;
+  gap: 25px;
+}
+.studio-app .stage-stats > span {
+  font-size: 23px;
+}
+.studio-app .stage-stats small {
+  font-size: 11px;
+  color: #bbceaa;
+}
+.studio-app .stage-coordinate {
+  display: none;
+}
+.studio-app .placement-instruction {
+  bottom: 114px;
+  max-width: calc(100% - 690px);
+  font-size: 14px;
+}
+.studio-app .mobile-panel-switch,
+.studio-app .panel-dismiss {
+  display: none;
+}
+html:has(.studio-app.studio-fullscreen) {
+  overflow: hidden;
+}
+.studio-app.studio-fullscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  width: 100%;
+  height: 100dvh;
+  padding: 0;
+  overflow: hidden;
+  background: #111b14;
+}
+.studio-app.studio-fullscreen > .topbar,
+.studio-app.studio-fullscreen > .campaign-strip {
+  display: none;
+}
+.studio-app.studio-fullscreen > .workspace {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+}
+@media (max-width: 1300px) {
+  .studio-app .topbar {
+    gap: 24px;
+    flex-wrap: wrap;
+  }
+  .studio-app .nav-links {
+    order: 3;
+    width: 100%;
+    min-height: 48px;
+    justify-content: space-between;
+  }
+  .studio-app .nav-right {
+    margin-left: auto;
+  }
+  .studio-app .nav-links {
+    gap: 18px;
+  }
+  .studio-app .save-status {
+    display: none;
+  }
+  .studio-app .asset-panel {
+    width: 244px;
+    left: 16px;
+  }
+  .studio-app .placement-panel {
+    width: 290px;
+    right: 16px;
+  }
+  .studio-app .placement-instruction {
+    max-width: calc(100% - 610px);
+  }
+}
+@media (max-width: 1100px) {
+  .studio-app .topbar {
+    flex-wrap: wrap;
+    gap: 18px;
+    padding: 15px 0;
+  }
+  .studio-app .nav-links {
+    min-height: 44px;
+  }
+  .studio-app .nav-right {
+    margin-left: auto;
+  }
+  .studio-app .header-actions .button {
+    padding: 0 12px;
+  }
+  .studio-app .workspace {
+    min-height: 660px;
+    height: calc(100svh - 220px);
+  }
+  .studio-app .asset-panel,
+  .studio-app .placement-panel {
+    display: none;
+    width: 300px;
+    top: 148px;
+    bottom: 106px;
+  }
+  .studio-app .workspace[data-mobile-panel='canvas'] .asset-panel,
+  .studio-app .workspace[data-mobile-panel='placements'] .placement-panel {
+    display: flex;
+  }
+  .studio-app .mobile-panel-switch {
+    display: flex;
+    position: absolute;
+    top: 94px;
+    left: 24px;
+    z-index: 5;
+    gap: 8px;
+  }
+  .studio-app .mobile-panel-switch button {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    min-height: 42px;
+    padding: 10px 13px;
+    border: 1px solid #b9d49640;
+    border-radius: 8px;
+    color: #e4efd7;
+    background: #263b2adb;
+    backdrop-filter: blur(12px);
+    font-size: 14px;
+  }
+  .studio-app .mobile-panel-switch button[aria-expanded='true'] {
+    background: #485e32;
+  }
+  .studio-app .panel-dismiss {
+    position: absolute;
+    right: 10px;
+    top: 10px;
+    display: grid;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    color: #d9e9c4;
+    z-index: 2;
+    border-radius: 6px;
+  }
+  .studio-app .panel-intro,
+  .studio-app .placement-heading {
+    padding-right: 24px;
+  }
+  .studio-app .placement-instruction {
+    max-width: calc(100% - 50px);
+    bottom: 110px;
+  }
+  .studio-app .stage-stats {
+    bottom: 118px;
+    left: 25px;
+  }
+  .studio-app .campaign-strip {
+    flex-wrap: wrap;
+    gap: 16px 24px;
+  }
+  .studio-app .strip-deliverables {
+    display: flex;
+    flex-basis: 40%;
+  }
+}
+@media (max-width: 760px) {
+  .studio-app {
+    padding: 0 12px 12px;
+  }
+  .studio-app .topbar {
+    gap: 8px 16px;
+    padding: 12px 0;
+  }
+  .studio-app .wordmark {
+    font-size: 27px;
+  }
+  .studio-app .nav-links {
+    order: 3;
+    width: 100%;
+    justify-content: space-between;
+    gap: 10px;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+  .studio-app .nav-links button,
+  .studio-app .nav-links a {
+    font-size: 13px;
+    min-height: 42px;
+  }
+  .studio-app .nav-right {
+    gap: 8px;
+  }
+  .studio-app .help-button {
+    display: none;
+  }
+  .studio-app .header-actions {
+    gap: 7px;
+  }
+  .studio-app .header-actions .button {
+    min-height: 40px;
+    font-size: 13px;
+    padding: 0 10px;
+  }
+  .studio-app .header-actions .button.secondary {
+    width: 40px;
+    font-size: 0;
+    padding: 0;
+    gap: 0;
+  }
+  .studio-app .campaign-strip {
+    display: flex;
+    padding: 16px;
+    gap: 16px;
+    margin: 12px 0;
+  }
+  .studio-app .campaign-strip > div {
+    min-width: 0;
+  }
+  .studio-app .campaign-strip-label {
+    border: 0;
+    padding: 0;
+    flex: 1 1 50%;
+  }
+  .studio-app .campaign-strip > div:nth-child(2) {
+    display: flex;
+  }
+  .studio-app .strip-deliverables {
+    flex-basis: 100%;
+  }
+  .studio-app .campaign-strip strong {
+    font-size: 14px;
+    flex-wrap: wrap;
+  }
+  .studio-app .campaign-strip > .button {
+    min-width: 120px;
+    margin: 0;
+  }
+  .studio-app .workspace {
+    min-height: 650px;
+    height: 78svh;
+  }
+  .studio-app .stage-top {
+    top: 20px;
+    left: 20px;
+    right: 16px;
+  }
+  .studio-app .stage-top h2 {
+    font-size: 22px;
+  }
+  .studio-app .stage-tabs {
+    left: 20px;
+    right: auto;
+    top: 88px;
+  }
+  .studio-app .stage-tabs button {
+    min-height: 40px;
+    font-size: 14px;
+    padding: 8px 10px;
+  }
+  .studio-app .mobile-panel-switch {
+    top: 146px;
+    left: 20px;
+  }
+  .studio-app .asset-panel,
+  .studio-app .placement-panel {
+    top: 198px;
+    bottom: 105px;
+    left: 12px;
+    right: 12px;
+    width: auto;
+    max-width: 340px;
+  }
+  .studio-app .asset-panel {
+    display: none;
+    padding: 22px 18px;
+    gap: 0;
+  }
+  .studio-app .panel-intro {
+    display: block;
+    flex-shrink: 0;
+  }
+  .studio-app .panel-intro h2 {
+    margin: 9px 0 7px;
+  }
+  .studio-app .asset-list {
+    display: flex;
+    flex-direction: column;
+  }
+  .studio-app .import-card,
+  .studio-app .sidebar-note,
+  .studio-app .panel-intro p {
+    display: block;
+  }
+  .studio-app .import-card {
+    align-self: stretch;
+  }
+  .studio-app .asset-copy small {
+    display: block;
+  }
+  .studio-app .human-picker {
+    display: block;
+    margin: 18px 0;
+  }
+  .studio-app .human-outfits {
+    flex-direction: column;
+  }
+  .studio-app .placement-content {
+    max-height: none;
+  }
+  .studio-app .camera-toolbar {
+    gap: 2px;
+    padding: 5px;
+  }
+  .studio-app .camera-toolbar button {
+    min-width: 33px;
+    padding: 8px;
+    font-size: 13px;
+  }
+  .studio-app .stage-bottom {
+    bottom: 16px;
+    gap: 9px;
+  }
+  .studio-app .stage-bottom > p {
+    font-size: 12px;
+  }
+  .studio-app .stage-stats {
+    bottom: 118px;
+    left: 20px;
+    gap: 20px;
+  }
+  .studio-app .stage-stats > span {
+    font-size: 20px;
+  }
+  .studio-app .placement-instruction {
+    bottom: 170px;
+    width: calc(100% - 36px);
+    max-width: none;
+  }
+}

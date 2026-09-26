@@ -4,10 +4,11 @@ import { isHumanPreset } from './humans';
 
 export const ASSETS: { id: AssetKind; name: string; label: string }[] = [
   { id: 'suitcase', name: 'The carry-on', label: 'TRAVEL' },
-  { id: 'backpack', name: 'The daily pack', label: 'EVERYDAY' },
+  { id: 'x-banner', name: 'X banner', label: 'SOCIAL' },
+  { id: 'twitch', name: 'Twitch stream background', label: 'LIVESTREAM' },
+  { id: 'billboard', name: 'IRL adspace / billboard', label: 'OUTDOOR' },
   { id: 'dress', name: 'The wardrobe', label: 'APPAREL' },
   { id: 'bicycle', name: 'The road bike', label: 'SPORT' },
-  { id: 'digital', name: 'The digital canvas', label: 'DIGITAL' },
 ];
 export const COLORS = ['#b4b8ab', '#e2d9c9', '#36463e', '#25272e', '#c4cd75'];
 export const DEFAULT_CAMPAIGN: Campaign = {
@@ -46,6 +47,16 @@ export function defaultSpots(asset: AssetKind): Spot[] {
       create('back-hero', 'Back / hero', [0, 1.78, -0.445], 1.12, 0.48, 300, true),
       create('back-bottom', 'Back / base', [0, 0.82, -0.445], 1.12, 0.5, 250, true),
     ];
+  if (asset === 'x-banner')
+    return [create('x-header', 'Profile / banner', [0, 2.2, 0.135], 3, 1, 350)];
+  if (asset === 'twitch')
+    return [
+      create('stream-left', 'Backdrop / left sponsor', [-1.05, 1.97, -0.105], 0.95, 0.55, 350),
+      create('stream-right', 'Backdrop / right sponsor', [1.05, 1.97, -0.105], 0.95, 0.55, 350),
+      create('stream-lower', 'Desk / sponsor strip', [0, 0.75, 0.875], 1.65, 0.26, 200),
+    ];
+  if (asset === 'billboard')
+    return [create('billboard-face', 'Billboard / main face', [0, 2.05, 0.145], 3.14, 1.34, 750)];
   if (asset === 'backpack')
     return [
       create('pack-top', 'Front / upper', [0, 1.98, 0.47], 0.75, 0.45, 250),
@@ -180,7 +191,10 @@ const campaignFields: (keyof Campaign)[] = [
 export function safeDraft(value: unknown): Draft | null {
   if (!isRecord(value)) return null;
   const { version, asset, color, spots, campaign, assetUrl, assetName, humanPreset } = value;
-  if (version !== 1 || ![...ASSETS.map((a) => a.id), 'custom'].includes(asset as AssetKind))
+  if (
+    version !== 1 ||
+    ![...ASSETS.map((a) => a.id), 'custom', 'backpack', 'digital'].includes(asset as AssetKind)
+  )
     return null;
   if (typeof color !== 'string' || !/^#[a-f0-9]{6}$/i.test(color)) return null;
   if (!Array.isArray(spots) || spots.length > 100 || !spots.every(isSpot)) return null;

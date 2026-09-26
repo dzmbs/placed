@@ -6,6 +6,7 @@ import type { AssetKind, HumanPresetId } from '@/lib/types';
 import { humanModelUrl, humanWardrobe, type HumanWardrobe } from '@/lib/humans';
 import { prepareImportedScene } from '@/lib/model-scene';
 import { assembleWardrobe } from '@/lib/wardrobe-scene';
+import { XBanner, TwitchBackground, Billboard } from './ad-space-models';
 
 function Box({
   position,
@@ -337,6 +338,9 @@ function ModelContent({
     );
   }
   if (kind === 'custom' && url) return <Imported url={url} />;
+  if (kind === 'x-banner') return <XBanner color={color} />;
+  if (kind === 'twitch') return <TwitchBackground color={color} />;
+  if (kind === 'billboard') return <Billboard color={color} />;
   if (kind === 'backpack') return <Backpack color={color} />;
   if (kind === 'dress') return <Dress color={color} />;
   if (kind === 'bicycle') return <Bicycle color={color} />;

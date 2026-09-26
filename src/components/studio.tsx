@@ -1,5 +1,8 @@
 'use client';
 import dynamic from 'next/dynamic';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { PENDING_KEY } from '@/lib/market';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ArrowDownToLine,
@@ -8,6 +11,9 @@ import {
   ArrowUpRight,
   Backpack,
   Bike,
+  RectangleHorizontal,
+  Video,
+  PanelsTopLeft,
   Box,
   Check,
   CheckCheck,
@@ -45,6 +51,7 @@ import {
 import { validId } from '@/lib/ids';
 import { HUMAN_PRESETS, humanWardrobe, type AvailableHuman } from '@/lib/humans';
 import HumanPicker from './human-picker';
+import './studio-immersive.css';
 import type { CameraCommand } from './viewer';
 
 const Viewer = dynamic(() => import('./viewer'), {
@@ -66,6 +73,9 @@ const icons = {
   dress: Shirt,
   bicycle: Bike,
   digital: Monitor,
+  'x-banner': PanelsTopLeft,
+  twitch: Video,
+  billboard: RectangleHorizontal,
   custom: Box,
 };
 
@@ -579,6 +589,7 @@ function ImportDialog({
 }
 
 export default function Studio() {
+  const router = useRouter();
   const [draft, setDraft] = useState<Draft>(initialDraft);
   const [selectedId, setSelectedId] = useState<string | null>('front-hero');
   const [mode, setMode] = useState<'edit' | 'preview'>('edit');
@@ -587,6 +598,7 @@ export default function Studio() {
   const [autoRotate, setAutoRotate] = useState(false);
   const [showSpots, setShowSpots] = useState(true);
   const [expanded, setExpanded] = useState(false);
+  const [mobilePanel, setMobilePanel] = useState<'canvas' | 'placements' | null>(null);
   const [command, setCommand] = useState<CameraCommand>({ view: 'iso', nonce: 0 });
   const [exportNonce, setExportNonce] = useState(0);
   const [ready, setReady] = useState(false);
@@ -682,14 +694,15 @@ export default function Studio() {
   }, [ready, saveCanvas]);
   useEffect(() => {
     const listener = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
+      if (e.key === 'Escape' && !modal) {
         setExpanded(false);
+        setMobilePanel(null);
         setPlacing(null);
       }
     };
     window.addEventListener('keydown', listener);
     return () => window.removeEventListener('keydown', listener);
-  }, []);
+  }, [modal]);
   function camera(view: CameraCommand['view']) {
     setCommand((c) => ({ view, nonce: c.nonce + 1 }));
   }
@@ -705,7 +718,7 @@ export default function Studio() {
     setSelectedId(next.spots[0]?.id ?? null);
     setPlacing(null);
     setMode('edit');
-    camera('iso');
+    camera(kind === 'x-banner' || kind === 'twitch' ? 'front' : 'iso');
   }
   function chooseHuman(human: AvailableHuman) {
     saveCanvas(draft);
@@ -806,11 +819,12 @@ export default function Studio() {
     const next = [structuredClone(draft), ...listings].slice(0, 12);
     try {
       localStorage.setItem(LISTINGS_KEY, JSON.stringify(next));
+      localStorage.setItem(PENDING_KEY, JSON.stringify(draft));
       setListings(next);
       setModal(null);
       setMode('preview');
       camera('iso');
-      notify('Listing saved to your local gallery.');
+      router.push('/publish');
     } catch {
       notify('Browser storage is full. Export your campaign to keep a copy.');
     }
@@ -836,13 +850,14 @@ export default function Studio() {
     camera('iso');
   }
   return (
-    <main className={`app ${expanded ? 'stage-expanded' : ''}`}>
+    <main className={`app studio-app ${expanded ? 'studio-fullscreen' : ''}`}>
       <nav className="topbar" aria-label="Main navigation">
         <a className="wordmark" href="/" aria-label="Placed home">
           <Mark />
           placed<span>®</span>
         </a>
         <div className="nav-links">
+          <Link href="/">Explore</Link>
           <button
             className="nav-active"
             onClick={() => {
@@ -858,6 +873,8 @@ export default function Studio() {
             My gallery
             {listings.length > 0 && <span className="count-badge">{listings.length}</span>}
           </button>
+          <Link href="/why">Why Placed?</Link>
+          <Link href="/portfolio">Portfolio</Link>
         </div>
         <div className="nav-right">
           <span className="local-badge">
@@ -872,56 +889,81 @@ export default function Studio() {
           >
             <CircleHelp size={18} />
           </button>
+          <div className="header-actions">
+            <span className="save-status">
+              {saved ? <CheckCheck size={15} /> : <LoaderCircle size={15} className="spin" />}
+              {saved ? 'Draft saved locally' : 'Saving…'}
+            </span>
+            <button
+              className="button secondary"
+              onClick={() => {
+                downloadJSON(draft);
+                notify('Campaign exported.');
+              }}
+            >
+              <ArrowDownToLine size={16} />
+              Export
+            </button>
+            <button className="button primary" onClick={() => setModal('publish')}>
+              Publish canvas
+              <ArrowUpRight size={17} />
+            </button>
+          </div>
           <span className="avatar">
             Y<span />
           </span>
         </div>
       </nav>
-      <header className="page-header">
+      <section className="campaign-strip" aria-label="Campaign details">
+        <div className="campaign-strip-label">
+          <span className="step-label">03 / THE MOMENT</span>
+          <strong>{draft.campaign.event}</strong>
+        </div>
         <div>
-          <div className="eyebrow">
-            <span className="tiny-square" />
-            THE PLACEMENT STUDIO
-          </div>
-          <h1>
-            Your world. <span>Their next billboard.</span>
-          </h1>
-          <p>Turn the things you carry, wear, and share into something worth sponsoring.</p>
+          <span className="section-label">ON DISPLAY</span>
+          <strong>
+            {new Date(`${draft.campaign.startDate}T12:00`).toLocaleDateString('en-US', {
+              month: 'short',
+              day: 'numeric',
+            })}{' '}
+            —{' '}
+            {new Date(`${draft.campaign.endDate}T12:00`).toLocaleDateString('en-US', {
+              month: 'short',
+              day: 'numeric',
+            })}
+            <span className="muted">{draft.campaign.startDate.slice(0, 4)}</span>
+          </strong>
         </div>
-        <div className="header-actions">
-          <span className="save-status">
-            {saved ? <CheckCheck size={15} /> : <LoaderCircle size={15} className="spin" />}
-            {saved ? 'Draft saved locally' : 'Saving…'}
-          </span>
+        <div className="strip-deliverables">
+          <span className="section-label">WHAT BRANDS GET</span>
+          <strong>{draft.campaign.deliverables}</strong>
+        </div>
+        <button className="button secondary" onClick={() => setModal('campaign')}>
+          Edit details
+          <ArrowUpRight size={15} />
+        </button>
+      </section>
+      <div className="workspace" data-mobile-panel={mobilePanel ?? undefined}>
+        <aside className="asset-panel" id="studio-canvas-menu" aria-label="Canvas menu">
           <button
-            className="button secondary"
-            onClick={() => {
-              downloadJSON(draft);
-              notify('Campaign exported.');
-            }}
+            className="panel-dismiss"
+            aria-label="Close canvas menu"
+            onClick={() => setMobilePanel(null)}
           >
-            <ArrowDownToLine size={16} />
-            Export
+            <X size={20} />
           </button>
-          <button className="button primary" onClick={() => setModal('publish')}>
-            Publish canvas
-            <ArrowUpRight size={17} />
-          </button>
-        </div>
-      </header>
-      <div className="workspace">
-        <aside className="asset-panel">
           <div className="panel-intro">
             <span className="step-label">01 / THE CANVAS</span>
             <h2>Start with your world.</h2>
             <p>What’s getting sponsored?</p>
           </div>
-          <div className="asset-list">
+          <div className="asset-list" role="group" aria-label="Canvas templates" tabIndex={0}>
             {ASSETS.map((a) => (
               <button
                 key={a.id}
                 className={`asset-card ${draft.asset === a.id ? 'selected' : ''}`}
                 onClick={() => chooseAsset(a.id)}
+                aria-pressed={draft.asset === a.id}
               >
                 <span className={`asset-thumbnail ${a.id}`}>
                   <Thumbnail kind={a.id} />
@@ -988,6 +1030,12 @@ export default function Studio() {
               </div>
             </div>
           )}
+          <button
+            className="button secondary full model-export"
+            onClick={() => setExportNonce((n) => n + 1)}
+          >
+            <Download size={17} /> Export 3D model
+          </button>
           <div className="sidebar-note">
             <span className="tiny-square" />
             <p>
@@ -1019,11 +1067,32 @@ export default function Studio() {
             </div>
             <button
               className="stage-icon"
-              aria-label={expanded ? 'Exit expanded view' : 'Expand 3D view'}
-              title={expanded ? 'Exit expanded view' : 'Expand view'}
+              aria-label={expanded ? 'Exit full-screen studio' : 'Open full-screen studio'}
+              aria-pressed={expanded}
+              title={expanded ? 'Exit full screen (Esc)' : 'Open full-screen studio'}
               onClick={() => setExpanded((e) => !e)}
             >
               {expanded ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
+            </button>
+          </div>
+          <div className="mobile-panel-switch" aria-label="Studio menus">
+            <button
+              aria-controls="studio-canvas-menu"
+              aria-expanded={mobilePanel === 'canvas'}
+              onClick={() => {
+                setMobilePanel(mobilePanel === 'canvas' ? null : 'canvas');
+              }}
+            >
+              <Box size={17} /> Canvas
+            </button>
+            <button
+              aria-controls="studio-placement-menu"
+              aria-expanded={mobilePanel === 'placements'}
+              onClick={() => {
+                setMobilePanel(mobilePanel === 'placements' ? null : 'placements');
+              }}
+            >
+              <Layers3 size={17} /> Placements
             </button>
           </div>
           <div className="stage-tabs">
@@ -1111,7 +1180,14 @@ export default function Studio() {
           </div>
           <span className="stage-coordinate">35° N / YOUR NEXT MOVE</span>
         </section>
-        <aside className="placement-panel">
+        <aside className="placement-panel" id="studio-placement-menu" aria-label="Placement menu">
+          <button
+            className="panel-dismiss"
+            aria-label="Close placement menu"
+            onClick={() => setMobilePanel(null)}
+          >
+            <X size={20} />
+          </button>
           <div className="placement-heading">
             <span className="step-label">02 / THE SPACE</span>
             <div className="placement-title">
@@ -1215,7 +1291,7 @@ export default function Studio() {
                       id="spot-width"
                       type="range"
                       min="0.15"
-                      max="1.8"
+                      max="5"
                       step="0.01"
                       value={selected.width}
                       onChange={(e) => patchSpot({ width: Number(e.target.value) })}
@@ -1228,7 +1304,7 @@ export default function Studio() {
                       id="spot-height"
                       type="range"
                       min="0.12"
-                      max="1.5"
+                      max="5"
                       step="0.01"
                       value={selected.height}
                       onChange={(e) => patchSpot({ height: Number(e.target.value) })}
@@ -1237,6 +1313,7 @@ export default function Studio() {
                       className={`move-button ${placing === 'move' ? 'active' : ''}`}
                       onClick={() => {
                         setPlacing(placing === 'move' ? null : 'move');
+                        setMobilePanel(null);
                       }}
                     >
                       <Move size={13} />
@@ -1325,6 +1402,7 @@ export default function Studio() {
                 className={`button dark full ${placing === 'add' ? 'placing' : ''}`}
                 onClick={() => {
                   setPlacing(placing === 'add' ? null : 'add');
+                  setMobilePanel(null);
                   setShowSpots(true);
                   camera('iso');
                 }}
@@ -1347,49 +1425,6 @@ export default function Studio() {
           </div>
         </aside>
       </div>
-      <section className="campaign-strip">
-        <div className="campaign-strip-label">
-          <span className="step-label">03 / THE MOMENT</span>
-          <strong>{draft.campaign.event}</strong>
-        </div>
-        <div>
-          <span className="section-label">ON DISPLAY</span>
-          <strong>
-            {new Date(`${draft.campaign.startDate}T12:00`).toLocaleDateString('en-US', {
-              month: 'short',
-              day: 'numeric',
-            })}{' '}
-            —{' '}
-            {new Date(`${draft.campaign.endDate}T12:00`).toLocaleDateString('en-US', {
-              month: 'short',
-              day: 'numeric',
-            })}
-            <span className="muted">{draft.campaign.startDate.slice(0, 4)}</span>
-          </strong>
-        </div>
-        <div className="strip-deliverables">
-          <span className="section-label">WHAT BRANDS GET</span>
-          <strong>{draft.campaign.deliverables}</strong>
-        </div>
-        <button className="button secondary" onClick={() => setModal('campaign')}>
-          Edit details
-          <ArrowUpRight size={15} />
-        </button>
-      </section>
-      <footer className="footer">
-        <span>
-          <Mark />
-          Good things deserve to be seen.
-        </span>
-        <button onClick={() => setExportNonce((n) => n + 1)}>
-          <Download size={13} />
-          Export 3D model
-        </button>
-        <span>
-          BUILT FOR THE REAL WORLD
-          <span className="tiny-square" />
-        </span>
-      </footer>
       {toast && (
         <div className="toast" role="status">
           <Check size={17} />
@@ -1521,8 +1556,8 @@ export default function Studio() {
             </div>
           </div>
           <p className="modal-description">
-            Save this listing to your local gallery and explore it as a sponsor. Public sharing,
-            real bids, and EVM payments will be added later.
+            Save your canvas and continue to the local marketplace. Register the asset, set auction
+            terms, and test funded bids using simulated wallets and demo USDC.
           </p>
           {campaignErrors.length > 0 && (
             <div className="form-error">
@@ -1540,7 +1575,7 @@ export default function Studio() {
             disabled={campaignErrors.length > 0}
             onClick={publish}
           >
-            Save local listing
+            Continue to marketplace
             <ArrowUpRight size={16} />
           </button>
         </ModalShell>

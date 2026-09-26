@@ -10,6 +10,19 @@ test('every template starts with distinct, valid placements', () => {
     assert.equal(new Set(draft.spots.map((s) => s.id)).size, draft.spots.length);
   }
 });
+
+test('retiring a template does not discard existing saved campaign work', () => {
+  for (const asset of ['backpack', 'digital'] as const) {
+    assert.equal(
+      ASSETS.some((template) => template.id === asset),
+      false,
+    );
+    const draft = { ...initialDraft(), asset, spots: defaultSpots(asset) };
+    draft.spots[0].artwork = 'data:image/png;base64,aGVsbG8=';
+    draft.campaign.title = 'An existing saved campaign';
+    assert.deepEqual(safeDraft(JSON.parse(JSON.stringify(draft))), draft);
+  }
+});
 test('listing rejects impossible dates, invalid bids and an empty canvas', () => {
   const draft = initialDraft();
   draft.campaign.auctionEnd = 'not-a-date';

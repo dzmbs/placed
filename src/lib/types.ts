@@ -1,4 +1,14 @@
-export type AssetKind = 'suitcase' | 'backpack' | 'dress' | 'bicycle' | 'digital' | 'custom';
+export type AssetKind =
+  | 'suitcase'
+  | 'dress'
+  | 'bicycle'
+  | 'x-banner'
+  | 'twitch'
+  | 'billboard'
+  | 'custom'
+  // Retired templates remain readable so existing saved campaigns are not discarded.
+  | 'backpack'
+  | 'digital';
 export type HumanPresetId =
   | 'male-casual'
   | 'male-athletic'

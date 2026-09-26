@@ -238,7 +238,9 @@ function Scene(props: ViewerProps) {
   const root = useRef<THREE.Group>(null);
   const modelRoot = useRef<THREE.Group>(null);
   const controls = useRef<OrbitControlsImpl>(null);
-  const { camera, gl } = useThree();
+  const { camera, gl, size } = useThree();
+  const wideCanvas = ['x-banner', 'twitch', 'billboard'].includes(props.draft.asset);
+  const frameScale = wideCanvas ? Math.max(1, (size.height / size.width) * 1.05) : 1;
   const target = useRef<{ position: THREE.Vector3; look: THREE.Vector3 } | null>(null);
   const lastExport = useRef(0);
   useEffect(() => {
@@ -256,9 +258,11 @@ function Scene(props: ViewerProps) {
         position.y += 0.25;
       }
     }
+    // Keep wide ad surfaces in frame on portrait screens as well as desktop.
+    position.sub(look).multiplyScalar(frameScale).add(look);
     target.current = { position, look };
     // Selecting a spot should move the camera only when requested, not while editing its fields.
-  }, [props.command.nonce]);
+  }, [props.command.nonce, frameScale]);
   useFrame((_, delta) => {
     if (!target.current || !controls.current) return;
     const amount = 1 - Math.exp(-delta * 6);
@@ -319,7 +323,7 @@ function Scene(props: ViewerProps) {
   return (
     <>
       <color attach="background" args={['#101914']} />
-      <fog attach="fog" args={['#101914', 10, 24]} />
+      <fog attach="fog" args={['#101914', 10 * frameScale, 24 * frameScale]} />
       <ambientLight intensity={0.3} />
       <spotLight
         position={[3, 7, 4]}
@@ -411,7 +415,7 @@ function Scene(props: ViewerProps) {
         makeDefault
         target={[0, 1.4, 0]}
         minDistance={1.7}
-        maxDistance={10}
+        maxDistance={Math.max(10, 10 * frameScale)}
         minPolarAngle={0.2}
         maxPolarAngle={Math.PI / 2 + 0.08}
         enablePan={false}

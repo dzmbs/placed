@@ -50,6 +50,27 @@ test('template edits return when selecting the template again', () => {
   const other = selectCanvas(saved, current, 'dress');
   assert.deepEqual(selectCanvas(saved, other, 'suitcase'), current);
 });
+
+test('new ad canvases retain their own artwork, sizes and bids across switching and reload', () => {
+  let saved = {};
+  const templates = ['x-banner', 'twitch', 'billboard'] as const;
+  for (const asset of templates) {
+    const draft = selectCanvas(saved, initialDraft(), asset);
+    draft.spots[0].artwork = 'data:image/png;base64,aGVsbG8=';
+    draft.spots[0].price = 987;
+    draft.spots[0].width = 3.2;
+    draft.campaign.title = `${asset} campaign`;
+    saved = rememberCanvas(saved, draft);
+  }
+  const reloaded = safeCanvasDrafts(JSON.parse(JSON.stringify(saved)));
+  for (const asset of templates) {
+    const draft = selectCanvas(reloaded, initialDraft(), asset);
+    assert.equal(draft.spots[0].artwork, 'data:image/png;base64,aGVsbG8=');
+    assert.equal(draft.spots[0].price, 987);
+    assert.equal(draft.spots[0].width, 3.2);
+    assert.equal(draft.campaign.title, `${asset} campaign`);
+  }
+});
 test('corrupt archived entries are ignored without hiding valid canvases', () => {
   const draft = initialDraft();
   assert.deepEqual(safeCanvasDrafts({ valid: draft, broken: { asset: 'custom' } }), {

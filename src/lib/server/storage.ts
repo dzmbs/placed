@@ -16,8 +16,10 @@ export function assertLocalRequest(request: Request) {
     .split(',')
     .filter((value) => value.trim())
     .map((value) => new URL(value.trim()));
-  const local = ['localhost', '127.0.0.1', '[::1]'].includes(new URL(`http://${host}`).hostname);
-  if (!local && !allowed.some((url) => url.host === host)) {
+  const hostname = new URL(`http://${host}`).hostname;
+  const local = ['localhost', '127.0.0.1', '[::1]'].includes(hostname);
+  // Proxies may drop the port from Host, so match on hostname.
+  if (!local && !allowed.some((url) => url.hostname === hostname)) {
     console.warn('[studio] rejected host', {
       host,
       origin: request.headers.get('origin'),

@@ -304,6 +304,15 @@ export function MarketplaceProvider({
               }
             }}
             handleVerify={async (result) => {
+              const credential = result.responses?.[0] as
+                | { identifier?: string; nullifier?: string }
+                | undefined;
+              console.info('[world] proof from World', {
+                protocol: result.protocol_version,
+                environment: result.environment,
+                credential: credential?.identifier,
+                nullifier: credential?.nullifier?.slice(0, 12),
+              });
               try {
                 const current = await authenticate();
                 authorization.current = await client.api<ParticipantAuthorization>(

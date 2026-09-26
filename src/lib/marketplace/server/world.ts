@@ -189,9 +189,24 @@ async function verifyExpectedRequest(
   const salt = process.env.WORLD_IDENTITY_SALT;
   if (!salt || salt.length < 32)
     throw new RequestError('World identity storage is not configured.', 503);
+  // The staging simulator returns the same World ID 4.0 nullifier for every
+  // simulator identity, so one-human-one-wallet would let only the first tester
+  // through. Staging scopes the identity to the wallet; production stays strict.
+  const scope = config.environment === 'staging' ? `:${wallet.toLowerCase()}` : '';
   const identity = createHmac('sha256', salt)
-    .update(`${config.rpId}:${expected.action}:${nullifier}`)
+    .update(`${config.rpId}:${expected.action}:${nullifier}${scope}`)
     .digest('hex');
+  const linked = db.prepare('SELECT wallet FROM participants WHERE identity = ?').get(identity) as
+    | { wallet: string }
+    | undefined;
+  worldDebug('identity', {
+    wallet,
+    environment: config.environment,
+    walletScoped: Boolean(scope),
+    nullifier: `${BigInt(nullifier).toString(16).slice(0, 10)}…`,
+    identity: identity.slice(0, 12),
+    linkedWallet: linked?.wallet ?? null,
+  });
   assertIdentityAvailable(db, identity, wallet, config.environment);
   const now = Math.floor(Date.now() / 1000);
   const retryAt = claimWorldAttempt(db, wallet, now);

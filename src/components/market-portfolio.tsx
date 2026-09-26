@@ -228,7 +228,7 @@ export default function MarketPortfolio({ initialTab = 'holdings' }: { initialTa
               <Empty
                 title="No revenue tokens yet"
                 text="Browse token sales or trade tokens from listed creators."
-                href="/"
+                href="/explore"
               />
             ))}
           {tab === 'advertising' && (
@@ -272,7 +272,11 @@ export default function MarketPortfolio({ initialTab = 'holdings' }: { initialTa
                   );
                 })
               ) : (
-                <Empty title="No bids yet" text="Find an ad placement and place a bid." href="/" />
+                <Empty
+                  title="No bids yet"
+                  text="Find an ad placement and place a bid."
+                  href="/explore"
+                />
               )}
             </div>
           )}
@@ -326,7 +330,19 @@ export default function MarketPortfolio({ initialTab = 'holdings' }: { initialTa
                 .slice(0, 8)
                 .map((r) => (
                   <div key={r.id}>
-                    <span>{r.title.replaceAll('-', ' ')}</span>
+                    <span>
+                      {r.title.replaceAll('-', ' ')}
+                      {/^0x[a-fA-F0-9]{64}$/.test(r.id) && (
+                        <a
+                          className="mp-transaction-link"
+                          href={`https://sepolia.etherscan.io/tx/${r.id}`}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          View transaction ↗
+                        </a>
+                      )}
+                    </span>
                     <small>{dateLabel(r.at)}</small>
                   </div>
                 ))}

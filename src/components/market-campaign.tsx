@@ -42,17 +42,19 @@ export function CampaignForm({
           setError('Enter a date and time for each field.');
           return;
         }
-        if (closes <= opens || closes <= state.now || start <= closes || end <= start) {
+        if (
+          opens <= Date.now() + 30000 ||
+          closes <= opens ||
+          closes <= state.now ||
+          start <= closes ||
+          end <= start
+        ) {
           setError(
-            'Bidding must close in the future, before the display starts. The display must end after it starts.',
+            'Leave at least a minute before bidding opens for wallet confirmation. Close bidding before display starts, and end the display after it starts.',
           );
           return;
         }
-        const startingBid = amountOrZero(String(data.get('startingBid')));
-        if (!startingBid) {
-          setError('Enter a starting bid greater than zero, with up to six decimal places.');
-          return;
-        }
+        const startingBid = 1_000_000;
         setError('');
         transact(
           'Create auction',
@@ -81,7 +83,12 @@ export function CampaignForm({
       <div className="mp-form-grid">
         <label>
           Bidding opens
-          <input name="opens" type="datetime-local" defaultValue={localDate(state.now)} required />
+          <input
+            name="opens"
+            type="datetime-local"
+            defaultValue={localDate(Date.now() + 3 * 60000)}
+            required
+          />
         </label>
         <label>
           Bidding closes
@@ -111,17 +118,6 @@ export function CampaignForm({
           />
         </label>
         <label>
-          Starting bid (USDC)
-          <input
-            name="startingBid"
-            type="number"
-            min="0.000001"
-            step="0.000001"
-            defaultValue={asset.draft.spots.find((s) => s.id === slotId)?.price || undefined}
-            required
-          />
-        </label>
-        <label>
           Minimum bid increase (%)
           <input
             name="increment"
@@ -147,7 +143,8 @@ export function CampaignForm({
         </label>
       </div>
       <div className="mp-note">
-        Funds outside escrow are paid at auction settlement. All times are in your local timezone.
+        Auctions begin with no bids. The first bid must be at least 1 demo USDC. Funds outside
+        escrow are paid at auction settlement. All times are in your local timezone.
       </div>
       <p className="mp-muted">Included: {asset.draft.campaign.deliverables}</p>
       {error && (
@@ -189,7 +186,10 @@ export function BiddingPanel({
     return (
       <section className="mp-box">
         <h2>No active auction</h2>
-        <p className="mp-muted">This placement is not accepting bids.</p>
+        <p className="mp-muted">
+          This slot is published, but its creator has not opened an auction yet. Bidding opens when
+          a campaign is scheduled.
+        </p>
         {own && canCreate && (
           <AccessButton verified onClick={onCreate}>
             Create auction
@@ -211,10 +211,10 @@ export function BiddingPanel({
           <Badge tone={live ? 'green' : 'amber'}>{campaignStatus(c, state.now)}</Badge>
         </div>
         <span className="mp-muted">
-          {bid ? (c.status === 'open' ? 'Highest bid' : 'Winning bid') : 'Starting bid'}
+          {bid ? (c.status === 'open' ? 'Highest bid' : 'Winning bid') : 'No bids yet'}
         </span>
         <div className="mp-big-number">
-          {display(bid?.amount ?? min)}
+          {display(bid?.amount ?? 0)}
           <small>USDC</small>
         </div>
         <Rows

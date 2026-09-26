@@ -1,8 +1,8 @@
 # Demo walkthrough
 
-Use Ethereum Sepolia and test assets only. The studio at `/` stays separate from the marketplace at `/marketplace` so visual design can evolve independently.
+Use Ethereum Sepolia and test assets only. Start at `/`, browse assets at `/explore`, edit in `/studio` and manage your activity in `/portfolio`.
 
-1. Open **List an asset**. Upload a well-lit outfit photo against a plain background. Generate it through Tripo, import a GLB, use your saved studio draft, or explicitly choose the prepared shirt example. Mark, move and resize rectangular slots. Connect a creator wallet and complete World verification. Publish the asset, then confirm each slot transaction.
+1. Open **Studio**, prepare the asset and choose **Publish asset**. Upload a well-lit outfit photo against a plain background. Generate it through Tripo, import a GLB, use your saved studio draft, or explicitly choose the prepared shirt example. Mark, move and resize rectangular slots. Connect a creator wallet and complete World verification. Publish the asset, then confirm each slot transaction.
 2. Open the asset dashboard and create an advertising campaign. There is no financing requirement. Choose real bidding and display times, a bid increment and escrow percentage. Allow a minute for bidding to open.
 3. Connect another World-verified wallet as the advertiser. Get demo USDC, select a slot and preview a PNG/JPEG/WebP logo. Approve the USDC amount, then submit the funded bid. A second advertiser can outbid it; the first can withdraw the full previous bid.
 4. After bidding closes, finalize it. The app displays the winning artwork resolved through the slot's ENSv2 resolver. The winner can change only that slot's `ad.artwork` record. Proof still targets the original winning artwork.

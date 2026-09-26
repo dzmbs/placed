@@ -58,6 +58,17 @@ export type SaleBid = {
   claimed: boolean;
 };
 export type Financing = {
+  saleStarted?: boolean;
+  saleEnded?: boolean;
+  claimable?: boolean;
+  migrationReady?: boolean;
+  block?: string;
+  startBlock?: string;
+  endBlock?: string;
+  clearingPrice?: number;
+  allocationPending?: boolean;
+  unresolvedCampaigns?: number;
+  liquidityOwner?: string;
   redemptions?: Record<string, number>;
   id: string;
   name: string;
@@ -108,11 +119,13 @@ export type CampaignTerms = Pick<
   | 'increment'
   | 'escrowPercent'
 >;
-export type FinanceTerms = Pick<
+export type FinanceTerms = { biddingBlocks?: number } & Pick<
   Financing,
   'name' | 'symbol' | 'percent' | 'start' | 'end' | 'totalSupply' | 'floor' | 'threshold' | 'closes'
 >;
 export type MarketAction =
+  | { type: 'load-proofs' }
+  | { type: 'faucet' }
   | { type: 'approve'; scope: string; amount: number }
   | { type: 'publish'; draft: Draft; name: string; description: string }
   | { type: 'campaign'; terms: CampaignTerms }
@@ -124,7 +137,7 @@ export type MarketAction =
   | { type: 'release' | 'refund'; campaignId: string }
   | { type: 'finance'; assetId: string; terms: FinanceTerms }
   | { type: 'sale-bid'; assetId: string; budget: number; maxPrice: number }
-  | { type: 'sale-close' | 'sale-claim' | 'activate' | 'proceeds' | 'redeem'; assetId: string }
+  | { type: 'sale-close' | 'sale-claim' | 'activate' | 'redeem'; assetId: string }
   | {
       type: 'swap';
       quoteId: string;
@@ -197,6 +210,7 @@ export function redemptionReady(state: MarketState, asset: MarketAsset) {
     !!f &&
     f.status === 'active' &&
     state.now >= f.end &&
+    (f.unresolvedCampaigns ?? 0) === 0 &&
     state.campaigns
       .filter((c) => c.series === f.id)
       .every((c) => ['completed', 'refunded', 'no-sale'].includes(c.status))

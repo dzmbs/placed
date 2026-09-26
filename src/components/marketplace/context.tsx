@@ -40,10 +40,12 @@ export function MarketplaceProvider({
   children,
   connection,
   walletControl,
+  headless = false,
 }: {
   children: ReactNode;
   connection?: WalletConnection;
   walletControl: ReactNode;
+  headless?: boolean;
 }) {
   const wallet = connection?.wallet;
   const [session, setSession] = useState<client.WalletSession>();
@@ -61,6 +63,9 @@ export function MarketplaceProvider({
   const worldError = useRef<string>('');
   const worldAccepted = useRef(false);
   const authorization = useRef<ParticipantAuthorization | undefined>(undefined);
+  const verification = useRef<{ resolve: () => void; reject: (error: Error) => void } | undefined>(
+    undefined,
+  );
   async function refresh() {
     if (wallet)
       setWalletState({ wallet, balances: await client.api<WalletState>(`/wallet/${wallet}`) });
@@ -74,10 +79,12 @@ export function MarketplaceProvider({
     setWorld(undefined);
     setWorldOpen(false);
     authorization.current = undefined;
+    verification.current?.reject(new Error('Your wallet changed. Verify with the current wallet.'));
+    verification.current = undefined;
     return () => client.selectWalletProvider(undefined);
   }, [connection]);
   useEffect(() => {
-    if (!wallet) return;
+    if (!wallet || headless) return;
     let active = true,
       pending = false;
     const poll = async () => {
@@ -98,7 +105,7 @@ export function MarketplaceProvider({
       active = false;
       clearInterval(timer);
     };
-  }, [wallet, revision]);
+  }, [wallet, revision, headless]);
   async function run<T>(
     label: string,
     action: () => Promise<T>,
@@ -137,6 +144,8 @@ export function MarketplaceProvider({
   }
   async function verify() {
     if (!wallet) throw new Error('Connect your wallet first.');
+    const currentWallet = await client.api<WalletState>(`/wallet/${wallet}`);
+    if (currentWallet.authorized) return;
     const signedSession = await authenticate();
     const status = await client.api<{ verified: boolean }>(
       '/world/authorization',
@@ -167,6 +176,9 @@ export function MarketplaceProvider({
     );
     setWorld(request);
     setWorldOpen(true);
+    return new Promise<void>((resolve, reject) => {
+      verification.current = { resolve, reject };
+    });
   }
   return (
     <MarketplaceContext.Provider
@@ -183,69 +195,75 @@ export function MarketplaceProvider({
         refresh,
       }}
     >
-      <div className={styles.shell}>
-        <header className={styles.header}>
-          <Link className={styles.wordmark} href="/marketplace">
-            placed<span> / Sepolia</span>
-          </Link>
-          <nav>
-            <Link href="/marketplace">Explore</Link>
-            <Link href="/marketplace/create">List an asset</Link>
-            <Link href="/marketplace/holdings">Holdings</Link>
-            <Link href="/studio">3D studio</Link>
-            {balances?.admin && <Link href="/marketplace/admin">Admin</Link>}
-          </nav>
-          {walletControl}
-        </header>
-        <div className={styles.status} role="status" aria-live="polite">
-          <span>
-            {busy && '◌ '}
-            {notice}
-          </span>
-          {transaction && (
-            <a
-              href={`https://sepolia.etherscan.io/tx/${transaction}`}
-              target="_blank"
-              rel="noreferrer"
-            >
-              View transaction ↗
-            </a>
-          )}
-        </div>
-        {wallet && (
-          <div className={styles.walletBar}>
-            <span>
-              {balances ? `${Number(BigInt(balances.usdc)) / 1e6} demo USDC` : 'Reading balance…'}
-            </span>
-            <button
-              disabled={busy}
-              onClick={() => void run('Get demo USDC', () => client.faucet(wallet))}
-            >
-              Get demo USDC
-            </button>
-            <button
-              disabled={busy || balances?.authorized}
-              onClick={() => void run('Verify participant', verify, false)}
-            >
-              {balances?.authorized
-                ? 'Human verified'
-                : worldVerified
-                  ? 'Finish wallet authorization'
-                  : 'Verify with World'}
-            </button>
-            {balances && BigInt(balances.credit) > 0n && (
-              <button
-                disabled={busy}
-                onClick={() =>
-                  void run('Withdraw outbid funds', () => client.withdrawOutbid(wallet))
-                }
-              >
-                Withdraw {Number(BigInt(balances.credit)) / 1e6} USDC
-              </button>
+      <div className={headless ? undefined : styles.shell}>
+        {!headless && (
+          <>
+            <header className={styles.header}>
+              <Link className={styles.wordmark} href="/marketplace">
+                placed<span> / Sepolia</span>
+              </Link>
+              <nav>
+                <Link href="/marketplace">Explore</Link>
+                <Link href="/marketplace/create">List an asset</Link>
+                <Link href="/marketplace/holdings">Holdings</Link>
+                <Link href="/studio">3D studio</Link>
+                {balances?.admin && <Link href="/marketplace/admin">Admin</Link>}
+              </nav>
+              {walletControl}
+            </header>
+            <div className={styles.status} role="status" aria-live="polite">
+              <span>
+                {busy && '◌ '}
+                {notice}
+              </span>
+              {transaction && (
+                <a
+                  href={`https://sepolia.etherscan.io/tx/${transaction}`}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  View transaction ↗
+                </a>
+              )}
+            </div>
+            {wallet && (
+              <div className={styles.walletBar}>
+                <span>
+                  {balances
+                    ? `${Number(BigInt(balances.usdc)) / 1e6} demo USDC`
+                    : 'Reading balance…'}
+                </span>
+                <button
+                  disabled={busy}
+                  onClick={() => void run('Get demo USDC', () => client.faucet(wallet))}
+                >
+                  Get demo USDC
+                </button>
+                <button
+                  disabled={busy || balances?.authorized}
+                  onClick={() => void run('Verify participant', verify, false)}
+                >
+                  {balances?.authorized
+                    ? 'Human verified'
+                    : worldVerified
+                      ? 'Finish wallet authorization'
+                      : 'Verify with World'}
+                </button>
+                {balances && BigInt(balances.credit) > 0n && (
+                  <button
+                    disabled={busy}
+                    onClick={() =>
+                      void run('Withdraw outbid funds', () => client.withdrawOutbid(wallet))
+                    }
+                  >
+                    Withdraw {Number(BigInt(balances.credit)) / 1e6} USDC
+                  </button>
+                )}
+              </div>
             )}
-          </div>
+          </>
         )}
-        <main className={styles.main}>{children}</main>
+        {headless ? children : <main className={styles.main}>{children}</main>}
         {world && (
           <IDKitRequestWidget
             {...world}
@@ -255,6 +273,15 @@ export function MarketplaceProvider({
               setWorldOpen(open);
               if (!open && !worldAccepted.current && !worldError.current)
                 setNotice('Verification cancelled. Publishing and bidding remain unavailable.');
+              if (!open && !worldAccepted.current) {
+                verification.current?.reject(
+                  new Error(
+                    worldError.current ||
+                      'Verification cancelled. No protected action was completed.',
+                  ),
+                );
+                verification.current = undefined;
+              }
             }}
             handleVerify={async (result) => {
               const current = await authenticate();
@@ -281,14 +308,25 @@ export function MarketplaceProvider({
               }
             }}
             onSuccess={async () => {
-              if (wallet && authorization.current)
-                await run('Authorize verified participant on Sepolia', () =>
-                  client.authorizeParticipant(wallet, authorization.current!),
+              try {
+                if (!wallet || !authorization.current)
+                  throw new Error('Verification authorization is missing.');
+                await client.authorizeParticipant(wallet, authorization.current);
+                await refresh();
+                verification.current?.resolve();
+              } catch (error) {
+                verification.current?.reject(
+                  error instanceof Error ? error : new Error('Wallet authorization failed.'),
                 );
+              } finally {
+                verification.current = undefined;
+              }
             }}
             onError={(code) => {
               worldError.current ||= `World verification failed (${code}). Publishing remains locked.`;
               setNotice(worldError.current);
+              verification.current?.reject(new Error(worldError.current));
+              verification.current = undefined;
             }}
           />
         )}

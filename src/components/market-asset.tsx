@@ -41,7 +41,7 @@ export default function MarketAssetPage({
         <Empty
           title="Listing not found"
           text="This listing may have been removed. Browse other ad spaces."
-          href="/"
+          href="/explore"
         />
       </MarketShell>
     );
@@ -77,7 +77,7 @@ export default function MarketAssetPage({
   };
   return (
     <MarketShell>
-      <Link className="mp-back" href="/">
+      <Link className="mp-back" href="/explore">
         <ArrowLeft size={15} />
         All spaces
       </Link>

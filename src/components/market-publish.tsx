@@ -46,7 +46,7 @@ export default function MarketPublish() {
       <MarketShell>
         <Empty
           title="Create your ad space first"
-          text="Add your placements in Studio, then choose Publish canvas."
+          text="Add your placements in Studio, then choose Publish asset."
           href="/studio"
           action="Open Studio"
         />
@@ -79,7 +79,7 @@ export default function MarketPublish() {
           <Rows
             rows={[
               ['Placements', String(draft.spots.length)],
-              ['Campaign', draft.campaign.title],
+              ['Asset', draft.campaign.title],
             ]}
           />
         </section>

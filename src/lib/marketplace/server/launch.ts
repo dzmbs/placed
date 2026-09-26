@@ -127,6 +127,24 @@ export async function readLaunch(assetId: string, wallet?: Address) {
         functionName: 'bids',
         args: [id],
       });
+      const [exits, claims] = await Promise.all([
+        publicClient.getContractEvents({
+          address: auction,
+          abi: ccaAbi,
+          eventName: 'BidExited',
+          args: { bidId: id },
+          fromBlock: configuration.startBlock,
+          toBlock: block,
+        }),
+        publicClient.getContractEvents({
+          address: auction,
+          abi: ccaAbi,
+          eventName: 'TokensClaimed',
+          args: { bidId: id },
+          fromBlock: configuration.startBlock,
+          toBlock: block,
+        }),
+      ]);
       let hints: { last: string; outbid: string } | undefined;
       if (Boolean(values[7]) && bid.exitedBlock === 0n && bid.maxPrice <= BigInt(values[5])) {
         let cursor = BigInt(values[8]);
@@ -153,6 +171,9 @@ export async function readLaunch(assetId: string, wallet?: Address) {
         maxPrice: String(bid.maxPrice),
         exited: bid.exitedBlock !== 0n,
         tokensFilled: String(bid.tokensFilled),
+        refunded: exits[0] ? String(exits[0].args.currencyRefunded) : undefined,
+        allocated: exits[0] ? String(exits[0].args.tokensFilled) : undefined,
+        claimed: claims.length > 0,
         hints,
       };
     }),

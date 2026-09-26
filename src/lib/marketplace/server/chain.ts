@@ -6,6 +6,7 @@ import { RequestError } from './http';
 
 export const publicClient = createPublicClient({
   chain: marketplaceChain,
+  batch: { multicall: { wait: 20 } },
   transport: http(process.env.SEPOLIA_RPC_URL || 'https://ethereum-sepolia-rpc.publicnode.com', {
     timeout: 20000,
   }),

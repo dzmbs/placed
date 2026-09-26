@@ -1,4 +1,4 @@
-import CreateAsset from '@/components/marketplace/create';
+import { redirect } from 'next/navigation';
 export default function Page() {
-  return <CreateAsset />;
+  redirect('/studio');
 }

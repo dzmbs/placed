@@ -29,6 +29,19 @@ export default function MarketAdmin() {
             <button className="mp-button" onClick={wallet}>
               Connect wallet
             </button>
+          ) : admin ? (
+            <AccessButton
+              className="mp-button"
+              onClick={() =>
+                transact(
+                  'Load proof photos',
+                  'Sign a wallet challenge to access private campaign proof. This does not transfer funds.',
+                  { type: 'load-proofs' },
+                )
+              }
+            >
+              Load proof photos
+            </AccessButton>
           ) : undefined
         }
       />
@@ -36,7 +49,7 @@ export default function MarketAdmin() {
         <Empty
           title="Admin access required"
           text="Sign in with an authorized wallet to review campaigns."
-          href="/"
+          href="/explore"
           action="Back to marketplace"
         />
       ) : queue.length ? (

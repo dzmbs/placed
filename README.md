@@ -4,7 +4,7 @@ Creators list assets. Brands book advertising slots. Investors can buy shares of
 
 Upload an outfit photo, generate a rotatable model, mark placements and preview a logo. Run funded USDC auctions with escrow and proof-photo settlement. Financing is optional: a separate **Raise capital** action creates one fixed-supply revenue token and vault per asset, launches it through Uniswap CCA and migrates liquidity to Uniswap v4.
 
-The redesigned UI at `/` includes listings, auctions, campaign proof, creator tokens and portfolios. Its wallet/backend adapter still needs to be connected; see [backend integration](docs/backend-integration.md). The connected Sepolia implementation remains available at `/marketplace`.
+The landing page is at `/`. Browse auctions at `/explore`, prepare an asset at `/studio`, and manage listings, bids and revenue tokens at `/portfolio`. The redesigned UI connects to the Sepolia backend through [one shared adapter](docs/backend-integration.md).
 
 Built with Next.js, React Three Fiber, Solidity, Privy, World ID and ENSv2. The marketplace uses Ethereum Sepolia and a clearly labeled demo USDC token.
 
@@ -20,13 +20,13 @@ cp .env.example .env.local
 npm run dev
 ```
 
-Open the [redesigned UI](http://127.0.0.1:3000), [connected marketplace](http://127.0.0.1:3000/marketplace) or [3D studio](http://127.0.0.1:3000/studio). Models and Blender sources are included. The studio and prepared examples work without credentials.
+Open the [landing page](http://127.0.0.1:3000), [marketplace](http://127.0.0.1:3000/explore) or [3D studio](http://127.0.0.1:3000/studio). Models and Blender sources are included. The studio and prepared examples work without credentials.
 
 For image-to-3D, set `TRIPO_API_KEY` and `GENERATION_ENABLED=true`. The standalone studio also supports Meshy. Generation uses provider credits. `OPENAI_API_KEY` enables proof-photo matching.
 
 Set `NEXT_PUBLIC_PRIVY_APP_ID` and allow the exact origin `http://127.0.0.1:3000` in the Privy dashboard for wallet connection. `localhost` and `127.0.0.1` are separate origins. A Privy app secret is not used by the browser.
 
-Publishing and advertising bids require backend-verified World Proof of Human and a connected Sepolia wallet. Configure World credentials and contract signers using [the integration guide](docs/integrations.md). Use **Get demo USDC** after connecting. Investors do not need World verification.
+Publishing and advertising bids require backend-verified World Proof of Human and a connected Sepolia wallet. Configure World credentials and contract signers using [the integration guide](docs/integrations.md). Open the wallet button for **Get demo USDC**, **Change wallet** and verification. Investors do not need World verification.
 
 The studio saves drafts in your browser. The marketplace stores media, sessions and proof results under `data/`; asset records and payments live on Sepolia. Back up `data/` and keep it persistent when hosting. Set `APP_ORIGIN` to the public application URL before publishing media references.
 

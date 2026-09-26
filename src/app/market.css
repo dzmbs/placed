@@ -13,6 +13,105 @@
   min-height: 90px;
   border-bottom: 1px solid #dce2d4;
 }
+.mp-nav-tools {
+  display: flex;
+  gap: 6px;
+}
+.mp-tool-button {
+  padding: 10px;
+  min-width: 42px;
+}
+.mp-wallet-address {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow-wrap: anywhere;
+  font-size: 13px;
+}
+.mp-wallet-address .mp-icon {
+  flex-shrink: 0;
+}
+.mp-rows dt:has(svg) {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.mp-verified {
+  color: #527a27;
+}
+.mp-transaction-progress {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 1100;
+  display: flex;
+  gap: 15px;
+  width: min(440px, calc(100vw - 32px));
+  padding: 20px;
+  border: 1px solid #c4d6ae;
+  border-radius: 14px;
+  background: #fcfdf6;
+  color: #253c28;
+  box-shadow: 0 12px 45px #0d201c30;
+}
+.mp-progress-icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: #e7f1d7;
+}
+.mp-transaction-progress strong {
+  display: block;
+  font-size: 15px;
+}
+.mp-transaction-progress strong + span {
+  display: block;
+  font-size: 12px;
+  color: #728067;
+  margin-top: 5px;
+}
+.mp-transaction-progress a {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  text-decoration: underline;
+  margin-top: 10px;
+}
+.mp-progress-steps {
+  display: flex;
+  gap: 6px;
+  margin-top: 14px;
+}
+.mp-progress-steps span {
+  font-size: 10px;
+  border-top: 3px solid #e0e6d9;
+  padding-top: 5px;
+  flex: 1;
+  color: #8a9481;
+}
+.mp-progress-steps .done {
+  border-color: #9bb955;
+  color: #3e592d;
+}
+@media (max-width: 760px) {
+  .mp-nav {
+    gap: 14px;
+  }
+  .mp-nav-tools {
+    gap: 3px;
+  }
+  .mp-tool-button {
+    min-width: 34px;
+    padding: 7px;
+  }
+  .mp-transaction-progress {
+    right: 16px;
+    bottom: 16px;
+  }
+}
 .mp-nav nav {
   display: flex;
   gap: 30px;
@@ -1211,4 +1310,91 @@
   .mp-dialog-actions .mp-button {
     flex: 1;
   }
+}
+.mp-dialog-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: #10261cb3;
+  backdrop-filter: blur(7px);
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  overflow-y: auto;
+}
+.mp-dialog-overlay .mp-dialog {
+  position: relative;
+  display: block;
+  margin: auto;
+  overflow-y: auto;
+}
+.mp-wallet-summary {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px;
+  background: linear-gradient(125deg, #eaf2dc, #f3f6e8);
+  border: 1px solid #d6e3c2;
+  border-radius: 12px;
+  margin: 20px 0 10px;
+}
+.mp-wallet-symbol {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: #d6ee99;
+  color: #395128;
+}
+.mp-wallet-summary > div {
+  flex: 1;
+}
+.mp-wallet-summary > div > span {
+  font-size: 10px;
+  letter-spacing: 1px;
+  color: #748665;
+}
+.mp-wallet-summary strong {
+  display: block;
+  font-size: 29px;
+  line-height: 1.3;
+  font-weight: 600;
+  letter-spacing: -1px;
+}
+
+.mp-header {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  background: #f5f6eeed;
+  backdrop-filter: blur(14px);
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+}
+.mp-header .mp-nav {
+  width: min(1504px, calc(100% - 48px));
+  margin: 0 auto;
+  min-height: 76px;
+  gap: 48px;
+}
+@media (max-width: 800px) {
+  .mp-header .mp-nav {
+    padding: 12px 0 0;
+    gap: 8px 16px;
+    min-height: 76px;
+    width: calc(100% - 32px);
+  }
+}
+.mp-transaction-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 8px;
+  text-decoration: underline;
+  font-size: 12px;
+}
+.mp-error .mp-transaction-link {
+  display: flex;
+  margin: 8px 0 0;
 }

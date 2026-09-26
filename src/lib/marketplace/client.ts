@@ -23,6 +23,7 @@ import type {
   ParticipantAuthorization,
   ProofAuthorization,
 } from './domain';
+import { reportProgress } from './progress';
 
 export const browserPublicClient = createPublicClient({
   chain: marketplaceChain,
@@ -42,19 +43,31 @@ export async function api<T>(
   init?: RequestInit,
   session?: WalletSession,
 ): Promise<T> {
-  const response = await fetch(`/api/marketplace${path}`, {
+  const request = {
     ...init,
     headers: { ...init?.headers, ...(session ? { authorization: `Bearer ${session.token}` } : {}) },
-  });
-  const body = await response.json();
-  if (!response.ok) throw new Error(body.error || 'The request failed.');
-  return body as T;
+  };
+  for (let attempt = 0; ; attempt++) {
+    const response = await fetch(`/api/marketplace${path}`, request);
+    if (
+      (!init?.method || init.method === 'GET') &&
+      [429, 502, 503].includes(response.status) &&
+      attempt < 2
+    ) {
+      await new Promise((resolve) => setTimeout(resolve, 650 * (attempt + 1)));
+      continue;
+    }
+    const body = await response.json();
+    if (!response.ok) throw new Error(body.error || 'The request failed.');
+    return body as T;
+  }
 }
 async function provider(): Promise<EIP1193Provider> {
   if (!walletProvider) throw new Error('Connect your wallet with Privy first.');
   return walletProvider();
 }
 export async function signIn(wallet: Address): Promise<WalletSession> {
+  reportProgress({ phase: 'wallet', label: 'Sign the wallet challenge to continue' });
   const challenge = await api<{ id: string; message: string }>('/auth/challenge', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
@@ -72,6 +85,38 @@ export async function signIn(wallet: Address): Promise<WalletSession> {
     body: JSON.stringify({ id: challenge.id, signature }),
   });
 }
+const pendingTransactions = new Map<string, { hash: Hex; cancelled: boolean }>();
+async function trackReceipt(hash: Hex, label: string, key: string) {
+  reportProgress({ phase: 'pending', label: `Waiting for ${label} confirmation`, hash });
+  let cancelled = pendingTransactions.get(key)?.cancelled ?? false;
+  const receipt = await browserPublicClient.waitForTransactionReceipt({
+    hash,
+    timeout: 180000,
+    onReplaced: (replacement) => {
+      cancelled = replacement.reason === 'cancelled' || replacement.reason === 'replaced';
+      const next = replacement.transaction.hash;
+      pendingTransactions.set(key, { hash: next, cancelled });
+      reportProgress({
+        phase: 'pending',
+        label: cancelled ? 'Checking wallet cancellation' : 'Tracking your sped-up transaction',
+        hash: next,
+      });
+    },
+  });
+  pendingTransactions.delete(key);
+  if (cancelled)
+    throw new Error(
+      'The wallet cancelled or replaced this transaction. The original action was not completed.',
+    );
+  if (receipt.status !== 'success')
+    throw new Error('The transaction was not successful. Refresh the listing before trying again.');
+  reportProgress({
+    phase: 'confirmed',
+    label: 'Confirmed on Sepolia',
+    hash: receipt.transactionHash,
+  });
+  return receipt;
+}
 async function transaction(
   wallet: Address,
   address: Address,
@@ -80,6 +125,13 @@ async function transaction(
   args: readonly unknown[] = [],
 ) {
   if (!marketplaceReady) throw new Error('The marketplace deployment is unavailable.');
+  const key = JSON.stringify([wallet.toLowerCase(), address, functionName, args], (_, value) =>
+    typeof value === 'bigint' ? String(value) : value,
+  );
+  const pending = pendingTransactions.get(key);
+  if (pending) return trackReceipt(pending.hash, 'transaction', key);
+  const label = functionName.replace(/([A-Z])/g, ' $1').toLowerCase();
+  reportProgress({ phase: 'preparing', label: `Checking ${label}` });
   const client = createWalletClient({
     account: wallet,
     chain: marketplaceChain,
@@ -95,11 +147,10 @@ async function transaction(
     functionName,
     args,
   });
+  reportProgress({ phase: 'wallet', label: `Confirm ${label} in your wallet` });
   const hash = await client.writeContract(simulated.request);
-  const receipt = await browserPublicClient.waitForTransactionReceipt({ hash });
-  if (receipt.status !== 'success')
-    throw new Error('The transaction reverted. No action was completed.');
-  return receipt;
+  pendingTransactions.set(key, { hash, cancelled: false });
+  return trackReceipt(hash, label, key);
 }
 export async function authorizeParticipant(
   wallet: Address,
@@ -287,8 +338,14 @@ export async function executeTrade(wallet: Address, quote: TradeQuote) {
     chain: marketplaceChain,
     transport: custom(await provider()),
   });
+  const [current] = await client.getAddresses();
+  if (current?.toLowerCase() !== wallet.toLowerCase())
+    throw new Error('Your wallet changed. Request a new quote.');
+  const key = JSON.stringify([wallet, encodeTrade(quote)]);
+  const pending = pendingTransactions.get(key);
+  if (pending) return trackReceipt(pending.hash, 'trade', key);
+  reportProgress({ phase: 'wallet', label: 'Confirm the trade in your wallet' });
   const hash = await client.sendTransaction({ to: universalRouter, data: encodeTrade(quote) });
-  const receipt = await browserPublicClient.waitForTransactionReceipt({ hash });
-  if (receipt.status !== 'success') throw new Error('The trade reverted. Refresh its quote.');
-  return receipt;
+  pendingTransactions.set(key, { hash, cancelled: false });
+  return trackReceipt(hash, 'trade', key);
 }

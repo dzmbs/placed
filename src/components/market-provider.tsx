@@ -9,8 +9,21 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { ArrowRight, LoaderCircle, X } from 'lucide-react';
-import type { MarketAction, MarketState } from '@/lib/market';
+import {
+  ArrowRight,
+  ArrowUpRight,
+  LoaderCircle,
+  X,
+  Wallet,
+  Droplets,
+  ShieldCheck,
+  RefreshCw,
+  LogOut,
+  Copy,
+} from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { friendlyMarketError, type TransactionProgress } from '@/lib/marketplace/progress';
+import { display, type MarketAction, type MarketState } from '@/lib/market';
 import {
   assertCanConfirm,
   marketClient,
@@ -66,34 +79,73 @@ export function MarketDialog({
   close: () => void;
   busy?: boolean;
 }) {
-  const dialog = useRef<HTMLDialogElement>(null);
+  const dialog = useRef<HTMLDivElement>(null);
+  const closeRef = useRef(close);
+  closeRef.current = close;
+  const busyRef = useRef(busy);
+  busyRef.current = busy;
   useEffect(() => {
+    const previous = document.activeElement as HTMLElement | null;
     const node = dialog.current;
-    node?.showModal();
-    return () => node?.close();
+    node?.focus();
+    const keyboard = (event: KeyboardEvent) => {
+      // Only the uppermost review handles keyboard dismissal and focus.
+      if (Array.from(document.querySelectorAll('.mp-dialog')).at(-1) !== node) return;
+      if (event.key === 'Escape' && !busyRef.current) {
+        event.preventDefault();
+        closeRef.current();
+      }
+      if (event.key !== 'Tab' || !node?.contains(document.activeElement)) return;
+      const controls = Array.from(
+        node.querySelectorAll<HTMLElement>(
+          'button:not(:disabled), a[href], input:not(:disabled), select, textarea, [tabindex="0"]',
+        ),
+      );
+      const first = controls[0],
+        last = controls.at(-1);
+      if (event.shiftKey && (document.activeElement === first || document.activeElement === node)) {
+        event.preventDefault();
+        last?.focus();
+      } else if (
+        !event.shiftKey &&
+        (document.activeElement === last || document.activeElement === node)
+      ) {
+        event.preventDefault();
+        first?.focus();
+      }
+    };
+    document.addEventListener('keydown', keyboard);
+    return () => {
+      document.removeEventListener('keydown', keyboard);
+      if (previous?.isConnected) previous.focus();
+    };
   }, []);
-  return (
-    <dialog
-      ref={dialog}
-      className="mp-dialog"
-      aria-label={title}
-      aria-busy={busy}
-      onCancel={(e) => {
-        e.preventDefault();
-        if (!busy) close();
-      }}
+  return createPortal(
+    <div
+      className="mp-dialog-overlay"
       onClick={(e) => {
         if (e.target === e.currentTarget && !busy) close();
       }}
     >
-      <div className="mp-dialog-inner">
-        <button className="mp-close" aria-label="Close dialog" onClick={close} disabled={busy}>
-          <X size={22} />
-        </button>
-        <h2>{title}</h2>
-        {children}
+      <div
+        ref={dialog}
+        className="mp-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+        aria-busy={busy}
+        tabIndex={-1}
+      >
+        <div className="mp-dialog-inner">
+          <button className="mp-close" aria-label="Close dialog" onClick={close} disabled={busy}>
+            <X size={22} />
+          </button>
+          <h2>{title}</h2>
+          {children}
+        </div>
       </div>
-    </dialog>
+    </div>,
+    document.body,
   );
 }
 
@@ -120,6 +172,17 @@ export function MarketProvider({
   const [transaction, setTransaction] = useState<Transaction | null>(null);
   const [txError, setTxError] = useState('');
   const [toast, setToast] = useState('');
+  const [progress, setProgress] = useState<TransactionProgress | null>(null);
+  useEffect(() => {
+    const changed = (event: Event) => {
+      const next = (event as CustomEvent<TransactionProgress>).detail;
+      setProgress((previous) =>
+        next.phase === 'refreshing' && !next.hash ? { ...next, hash: previous?.hash } : next,
+      );
+    };
+    window.addEventListener('placed-transaction', changed);
+    return () => window.removeEventListener('placed-transaction', changed);
+  }, []);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const notify = useCallback((message: string) => {
     setToast(message);
@@ -190,7 +253,7 @@ export function MarketProvider({
     };
   }, [client, refresh]);
 
-  const session = async (method: 'connect' | 'verify' | 'switchNetwork') => {
+  const session = async (method: 'connect' | 'verify' | 'switchNetwork' | 'changeWallet') => {
     if (!client) {
       setWalletError(unavailableMessage);
       setWalletOpen(true);
@@ -200,7 +263,17 @@ export function MarketProvider({
     pending.current = true;
     generation.current++;
     setBusy(true);
+    setProgress({
+      phase: 'wallet',
+      label:
+        method === 'verify'
+          ? 'Complete World verification, then authorize your wallet'
+          : method === 'switchNetwork'
+            ? 'Switch to Sepolia in your wallet'
+            : 'Connect your wallet with Privy',
+    });
     setWalletError('');
+    setWalletOpen(false);
     try {
       const next = await client[method]();
       if (!mounted.current) return false;
@@ -214,9 +287,7 @@ export function MarketProvider({
       return true;
     } catch (err) {
       if (mounted.current) {
-        setWalletError(
-          err instanceof Error ? err.message : 'Could not complete the request. Please try again.',
-        );
+        setWalletError(friendlyMarketError(err));
         setWalletOpen(true);
       }
       return false;
@@ -238,6 +309,7 @@ export function MarketProvider({
     pending.current = true;
     generation.current++;
     setBusy(true);
+    setProgress({ phase: 'preparing', label: 'Disconnecting your wallet' });
     try {
       const next = await client.disconnect();
       if (!mounted.current) return;
@@ -268,10 +340,12 @@ export function MarketProvider({
     if (pending.current) return;
     setTxError('');
     setTransaction({ title, description, action, onSuccess, user: current.current.current });
+    setWalletOpen(false);
   };
   const confirm = async () => {
     if (!transaction || !client || pending.current) return;
     const tx = transaction;
+    setProgress({ phase: 'preparing', label: `Preparing ${tx.title.toLowerCase()}` });
     pending.current = true;
     generation.current++;
     setBusy(true);
@@ -282,6 +356,8 @@ export function MarketProvider({
       if (!mounted.current) return;
       accept(latest);
       assertCanConfirm(latest, tx.action, tx.user);
+      setTransaction(null);
+      notify('Continue in your wallet. Waiting for confirmation…');
       const result = await client.execute(tx.action, tx.user);
       if (!mounted.current) return;
       accept(result.state);
@@ -296,12 +372,10 @@ export function MarketProvider({
           'Transaction confirmed. Your wallet changed; review your account before continuing.',
         );
     } catch (err) {
-      if (mounted.current)
-        setTxError(
-          err instanceof Error
-            ? err.message
-            : 'Transaction could not be completed. Please try again.',
-        );
+      if (mounted.current) {
+        setTransaction(tx);
+        setTxError(friendlyMarketError(err));
+      }
     } finally {
       pending.current = false;
       if (mounted.current) setBusy(false);
@@ -344,10 +418,33 @@ export function MarketProvider({
         >
           {active && (
             <>
+              <div className="mp-wallet-summary">
+                <span className="mp-wallet-symbol">
+                  <Wallet size={24} />
+                </span>
+                <div>
+                  <span>DEMO USDC</span>
+                  <strong>{display(active.usdc, 6)}</strong>
+                </div>
+                <span className="mp-badge">Sepolia</span>
+              </div>
               <dl className="mp-rows">
                 <div>
                   <dt>Account</dt>
-                  <dd>{active.address || active.name}</dd>
+                  <dd className="mp-wallet-address">
+                    <span>{active.address || active.name}</span>
+                    <button
+                      aria-label="Copy wallet address"
+                      className="mp-icon"
+                      onClick={() =>
+                        void navigator.clipboard
+                          .writeText(active.address || active.id)
+                          .then(() => notify('Wallet address copied.'))
+                      }
+                    >
+                      <Copy size={16} />
+                    </button>
+                  </dd>
                 </div>
                 {state?.networkName && (
                   <div>
@@ -355,7 +452,20 @@ export function MarketProvider({
                     <dd>{state.networkName}</dd>
                   </div>
                 )}
+
+                <div>
+                  <dt>
+                    <ShieldCheck size={15} /> Identity
+                  </dt>
+                  <dd className={active.verified ? 'mp-verified' : ''}>
+                    {active.verified ? 'Human verified' : 'Not verified'}
+                  </dd>
+                </div>
               </dl>
+              <p className="mp-small mp-muted">
+                Sepolia test assets have no monetary value. You also need Sepolia ETH for
+                transaction fees.
+              </p>
               {state?.network === 'unsupported' && (
                 <button
                   className="mp-button primary full"
@@ -365,8 +475,39 @@ export function MarketProvider({
                   Switch network
                 </button>
               )}
+              <button
+                className="mp-button primary full"
+                disabled={busy || state?.network !== 'supported'}
+                onClick={() =>
+                  transact(
+                    'Get demo USDC',
+                    'Request test USDC from the Sepolia faucet. Confirm the transaction in your wallet.',
+                    { type: 'faucet' },
+                  )
+                }
+              >
+                <Droplets size={18} />
+                Get demo USDC
+              </button>
+              {!active.verified && (
+                <button
+                  className="mp-button full"
+                  disabled={busy || state?.network !== 'supported'}
+                  onClick={() => void session('verify')}
+                >
+                  Verify with World
+                </button>
+              )}
+              <button
+                className="mp-button full"
+                disabled={busy}
+                onClick={() => void session('changeWallet')}
+              >
+                <RefreshCw size={17} />
+                Change wallet
+              </button>
               <button className="mp-button full" disabled={busy} onClick={() => void disconnect()}>
-                Disconnect
+                <LogOut size={17} /> Disconnect
               </button>
             </>
           )}
@@ -404,6 +545,16 @@ export function MarketProvider({
           {txError && (
             <p className="mp-error" role="alert">
               {txError}
+              {progress?.hash && (
+                <a
+                  className="mp-transaction-link"
+                  href={`https://sepolia.etherscan.io/tx/${progress.hash}`}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  View submitted transaction <ArrowUpRight size={14} />
+                </a>
+              )}
             </p>
           )}
           {busy && (
@@ -435,6 +586,49 @@ export function MarketProvider({
           <button aria-label="Dismiss message" onClick={() => setToast('')}>
             <X size={18} />
           </button>
+        </div>
+      )}
+      {busy && progress && (
+        <div className="mp-transaction-progress" role="status" aria-live="polite">
+          <div className="mp-progress-icon">
+            <LoaderCircle className="spin" size={23} />
+          </div>
+          <div>
+            <strong>{progress.label}</strong>
+            <span>
+              {progress.phase === 'pending'
+                ? 'Submitted. Waiting for the network.'
+                : progress.phase === 'wallet'
+                  ? 'Your wallet or verification dialog needs attention.'
+                  : 'Please keep this page open.'}
+            </span>
+            <div className="mp-progress-steps">
+              {['preparing', 'wallet', 'pending', 'confirmed'].map((phase, i) => (
+                <span
+                  key={phase}
+                  className={
+                    i <=
+                    ['preparing', 'wallet', 'pending', 'confirmed', 'refreshing'].indexOf(
+                      progress.phase,
+                    )
+                      ? 'done'
+                      : ''
+                  }
+                >
+                  {['Check', 'Approve', 'Confirm', 'Update'][i]}
+                </span>
+              ))}
+            </div>
+            {progress.hash && (
+              <a
+                href={`https://sepolia.etherscan.io/tx/${progress.hash}`}
+                target="_blank"
+                rel="noreferrer"
+              >
+                View transaction <ArrowUpRight size={13} />
+              </a>
+            )}
+          </div>
         </div>
       )}
     </MarketContext.Provider>

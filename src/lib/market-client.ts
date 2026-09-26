@@ -46,6 +46,7 @@ export function validateSwapQuote(quote: SwapQuote, now: number): SwapQuote {
 export interface MarketClient {
   getState(): Promise<MarketState>;
   connect(): Promise<MarketState>;
+  changeWallet(): Promise<MarketState>;
   disconnect(): Promise<MarketState>;
   switchNetwork(): Promise<MarketState>;
   verify(): Promise<MarketState>;
@@ -54,6 +55,5 @@ export interface MarketClient {
   subscribe?(onChange: () => void): () => void;
 }
 
-// Wire the engineer's implementation here during backend integration.
-// No local balances, accounts, verification or receipts are generated.
+// SepoliaProvider supplies the live adapter; standalone consumers fail closed.
 export const marketClient: MarketClient | null = null;

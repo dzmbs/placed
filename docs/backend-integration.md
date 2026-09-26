@@ -1,31 +1,27 @@
 # Marketplace integration
 
-The redesigned marketplace UI at `/` uses `MarketClient` in `src/lib/market-client.ts`. Connect the engineer's implementation there, or pass it to `MarketProvider`. The default is `null`: no wallet, listings, funds, verification results or receipts are fabricated. Without an adapter, the redesigned marketplace shows an unavailable state; Studio remains usable. The engineer's connected Sepolia UI is available separately at `/marketplace`.
+`SepoliaProvider` connects the redesigned UI to Privy, World verification and the Sepolia contracts through `createMarketAdapter`. Public browsing works without a wallet. `/` is the landing page, `/explore` lists assets, `/studio` prepares drafts, and `/portfolio` manages listings, bookings and investments. Older `/marketplace` routes redirect to these views.
 
-## Adapter contract
+## Data
 
-- `getState()` returns authenticated, authoritative `MarketState`. Public listings work with `current: null`. Return an empty assets array for a genuinely empty marketplace; reject on a service error.
-- `connect()`, `disconnect()`, `switchNetwork()` and `verify()` integrate the actual wallet and identity providers and return updated state. Mark network as `supported` only after checking the configured chain. Set `networkName` from that chain. Never accept a client-provided admin role or verification result.
-- `execute(action, accountId)` validates the signed-in account, chain, permissions and action against the server/contracts, requests required wallet signatures and resolves only after confirmation. Return `{state, message}`. Reject wallet cancellation, reverted transactions and validation errors. Implement idempotency/reconciliation so a network timeout cannot duplicate an action. Approvals must use verified spender addresses and chain token addresses; the UI's scope strings are identifiers, not addresses. Handle ERC-20 sell allowances in the swap implementation as well as USDC approval actions.
-- `quoteSwap(request)` returns a server/router quote: `{id, received, minimum, fee, impact, expires}`. Bind its ID to the account, asset, side, amount and slippage; revalidate all of them at execution. No local pool formula remains. `impact` is a percentage; `expires` is an epoch timestamp in milliseconds. `fee` uses the input currency.
-- `subscribe(onChange)` is optional. Notify on wallet/account/chain or indexed transaction changes. The UI also refreshes on focus and every 30 seconds while visible.
+`/api/marketplace/state` reads assets, slot metadata, campaigns, settlement events, CCA status and wallet balances from the deployed contracts and ENSv2. No accounts, balances, bids or verification results are fabricated. Private proof photos additionally require a signed server session. Admins choose **Load proof photos** to authenticate.
 
-All dates are epoch milliseconds. Percentages in records/actions use basis points, except `SwapQuote.impact`. UI amount integers use six-decimal fixed-point units and must stay within `Number.MAX_SAFE_INTEGER`; convert raw token amounts using their actual on-chain decimals with integer arithmetic. Reject unrepresentable values rather than rounding or overflowing. The adapter must not assume creator tokens have six on-chain decimals.
+Dates use milliseconds in the UI and seconds in contracts. Percentages use basis points. Display amounts use six decimal places; eighteen-decimal token balances are floored for display. Execution retains full raw quote amounts and redeems the actual token balance, including dust. Safe integer limits are checked before displaying amounts.
 
-## Data and action requirements
+An asset may have multiple slots. Campaigns retain their own snapshotted financing terms. One optional asset financing series covers eligible future campaigns across its slots. Redemption uses the vault's aggregate unresolved-campaign gate. Listing an asset never creates a token.
 
-- Populate campaign `startingBid` from its actual auction configuration. Bids must validate amount, allowance, deadlines, ownership and the current minimum on the backend.
-- Return confirmed ENS names only; use an empty string when none exists.
-- Upload artwork/proof data to persistent storage before submitting transactions. Media inputs currently provide an image data URL, file name and SHA-256 digest. Verify MIME, size and digest server-side; never send an image data URL as calldata. Only authorized viewers should receive private bid artwork.
-- Proof submissions contain no chosen result. The verifier sets `proofResult` to `pending`, `match` or `inconclusive`; refunds require backend authorization.
-- Return actual financing allocations, fees, sale results, balances, claim eligibility and revenue totals. Token-sale creation and activation must present the backend's fees, allocations and immutable terms before the wallet signature. The UI no longer assumes a 60/20/20 allocation or a fixed protocol fee.
-- Enforce redemption eligibility, token burning, claim uniqueness, auction settlement and escrow release/refund in the backend/contracts. Frontend button visibility is not authorization.
-- Return only the account data and receipts the current session is entitled to see. No real balances or session credentials belong in localStorage.
+## Transactions
 
-The Studio-to-publish handoff continues to read `placed-market-pending-v1`; this is a draft, not a registered listing. Studio editing, draft storage and model-generation endpoints were outside this audit and were left intact.
+The adapter checks the active account and Sepolia chain before signing. Contract calls are simulated, submitted through the selected Privy wallet, and awaited through Viem receipt tracking. Reverted receipts and wallet cancellation fail explicitly. Replacement tracking follows sped-up transactions and rejects cancelled or replaced operations.
 
-## Merge checks
+The UI displays preparation, wallet approval, network confirmation and state refresh. Submitted transactions have Etherscan links. A timed-out contract call retains its hash so retrying the same operation waits for the existing transaction. Completed actions retain a reconciliation marker if the subsequent state read fails. Multi-transaction publishing and CCA claiming resume from confirmed metadata and contract state. This tracking is in memory; after a reload, inspect onchain state before repeating an operation.
 
-Verify account/chain changes during reviews, rejected signatures, failed confirmations, expiring quotes during approval, upload failures, outbid withdrawals, proof review, refunds and redemption against the real services. Inspect desktop bidding and trading, historical booking links, and the empty/unavailable states. Run `npm run check` before merge.
+USDC approvals target the deployed AuctionHouse or Permit2 and the registered CCA/router spender. Swap quotes are bound to the account, asset, side, amount and slippage. Expiry is checked again after approvals. The router receives the original minimum output and deadline.
 
-The merged backend provides `/api/marketplace` routes, Privy and World integrations, and contract clients under `src/lib/marketplace`. Use these services when implementing the adapter; see [integration setup](integrations.md). The `/api/assets`, `/api/models`, `/api/humans`, `/api/config` and `/api/generations` routes belong to Studio. The connected implementation currently targets Sepolia and includes testnet funding controls; its production configuration and the redesigned UI adapter remain integration work.
+Artwork uploads validate format, size and the selected bytes before persistence. The backend derives the stored artwork hash. Only the auction winner's confirmed ENS artwork updates the public preview. Token holders gain no artwork authority. Proof outcomes come from the backend verifier; only a valid campaign-bound authorization releases escrow.
+
+CCA defaults are 60% sale, 20% liquidity and 20% retained supply, with up to 20% of net sale currency committed to liquidity. Fees and actual migration allocations come from the deployed launch configuration and events. Creator proceeds are transferred during migration; there is no separate collection action.
+
+## Checks
+
+Run `npm run check` and `npm run verify:marketplace`. Contract fork tests cover the official Sepolia ENSv2 and Uniswap deployments without broadcasting. A full public demo still needs signed CCA, trading and advertising transactions. See [setup](integrations.md) and [demo steps](demo.md).

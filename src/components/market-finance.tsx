@@ -31,7 +31,8 @@ export function FinanceForm({ asset, close }: { asset: MarketAsset; close: () =>
           const data = new FormData(e.currentTarget),
             number = (key: string) => Number(data.get(key)),
             date = (key: string) => Date.parse(String(data.get(key)));
-          const closes = date('closes'),
+          const biddingBlocks = number('blocks'),
+            closes = Date.now() + (biddingBlocks + 10) * 12000,
             start = date('start'),
             end = date('end');
           if (
@@ -47,7 +48,7 @@ export function FinanceForm({ asset, close }: { asset: MarketAsset; close: () =>
           }
           transact(
             'Launch token sale',
-            `Create ${data.get('supply')} ${String(data.get('symbol')).toUpperCase()} tokens sharing ${number('percent')}% of eligible revenue from ${dateLabel(start)} to ${dateLabel(end)}. Minimum token price: ${data.get('floor')} USDC. Minimum raise: ${data.get('threshold')} USDC. Sale closes ${dateLabel(closes)}. These terms cannot be changed after confirmation.`,
+            `Create ${data.get('supply')} ${String(data.get('symbol')).toUpperCase()} tokens sharing ${number('percent')}% of eligible revenue from ${dateLabel(start)} to ${dateLabel(end)}. Minimum token price: ${data.get('floor')} USDC. Minimum raise: ${data.get('threshold')} USDC. Bidding lasts ${biddingBlocks} blocks. Allocation: 60% sale, 20% liquidity, 20% retained. Up to 20% of net sale funds supplies liquidity. You own the initial LP position. Protocol fees follow the deployed CCA configuration. These terms cannot be changed.`,
             {
               type: 'finance',
               assetId: asset.id,
@@ -59,6 +60,7 @@ export function FinanceForm({ asset, close }: { asset: MarketAsset; close: () =>
                 floor: units(String(data.get('floor'))),
                 threshold: units(String(data.get('threshold'))),
                 closes,
+                biddingBlocks,
                 start,
                 end,
               },
@@ -91,37 +93,77 @@ export function FinanceForm({ asset, close }: { asset: MarketAsset; close: () =>
         </label>
         <label>
           Fixed token supply
-          <input name="supply" type="number" min="1" required />
+          <input name="supply" type="number" min="1" defaultValue="1000" required />
         </label>
         <label>
           Revenue share (%)
-          <input name="percent" type="number" min="0.01" max="100" step="0.01" required />
+          <input
+            name="percent"
+            type="number"
+            min="0.01"
+            max="100"
+            step="0.01"
+            defaultValue="50"
+            required
+          />
         </label>
         <label>
           Minimum token price (USDC)
-          <input name="floor" type="number" min="0.000001" step="0.000001" required />
+          <input
+            name="floor"
+            type="number"
+            min="0.000001"
+            step="0.000001"
+            defaultValue="0.10"
+            required
+          />
         </label>
         <label>
           Minimum raise (USDC)
-          <input name="threshold" type="number" min="1" step="0.000001" required />
+          <input
+            name="threshold"
+            type="number"
+            min="1"
+            step="0.000001"
+            defaultValue="50"
+            required
+          />
         </label>
         <label>
-          Sale closes
-          <input name="closes" type="datetime-local" min={localDate(state.now)} required />
+          Bidding window (blocks)
+          <input name="blocks" type="number" min="5" max="300" defaultValue="30" required />
         </label>
         <label>
           Revenue term starts
-          <input name="start" type="datetime-local" min={localDate(state.now)} required />
+          <input
+            name="start"
+            type="datetime-local"
+            min={localDate(state.now)}
+            defaultValue={localDate(Date.now() + 30 * 60000)}
+            required
+          />
         </label>
         <label>
           Revenue term ends
-          <input name="end" type="datetime-local" min={localDate(state.now)} required />
+          <input
+            name="end"
+            type="datetime-local"
+            min={localDate(state.now)}
+            defaultValue={localDate(Date.now() + 150 * 60000)}
+            required
+          />
         </label>
       </div>
       <div className="mp-note">
         Includes current and future placements. Existing campaigns keep their original terms. Times
         are in your local timezone.
       </div>
+      <p className="mp-small mp-muted">
+        60% of tokens go to the sale, 20% to liquidity, and 20% stay with you. Up to 20% of net sale
+        funds supplies liquidity. You own and may withdraw the initial LP position. Bidding opens
+        ten blocks after launch; claims and migration require later transactions. Financing is
+        optional and uses Sepolia test assets.
+      </p>
       {error && (
         <p className="mp-error" role="alert">
           {error}
@@ -188,7 +230,7 @@ export function InvestmentPanel({ asset }: { asset: MarketAsset }) {
         <Badge tone={f.status === 'active' ? 'green' : 'amber'}>
           {
             {
-              fundraising: state.now < f.closes ? 'Sale open' : 'Sale ended',
+              fundraising: f.saleEnded ? 'Sale ended' : f.saleStarted ? 'Sale open' : 'Scheduled',
               migration: 'Awaiting activation',
               active: 'Active',
               failed: 'Minimum raise not met',
@@ -208,12 +250,13 @@ export function InvestmentPanel({ asset }: { asset: MarketAsset }) {
             <Rows
               rows={[
                 ['Minimum token price', `${display(f.floor, 6)} USDC`],
-                ['Sale closes', dateLabel(f.closes)],
-                ['Budgets submitted', `${display(f.bids.reduce((s, b) => s + b.budget, 0))} USDC`],
+                ['Bidding blocks', `${f.startBlock} to ${f.endBlock} (current ${f.block})`],
+                ['Clearing price', `${display(f.clearingPrice ?? 0, 6)} USDC/token`],
+                ['Gross raised, checkpointed', `${display(f.gross)} USDC`],
                 ['Minimum raise', `${display(f.threshold)} USDC`],
               ]}
             />
-            {state.now < f.closes ? (
+            {!f.saleEnded && f.saleStarted ? (
               <>
                 <label className="mp-field">
                   Your budget (USDC)
@@ -258,6 +301,8 @@ export function InvestmentPanel({ asset }: { asset: MarketAsset }) {
                   <p className="mp-success">Your reserved budget: {display(myBudget)} USDC</p>
                 )}
               </>
+            ) : !f.saleEnded ? (
+              <p className="mp-muted">Bidding opens at block {f.startBlock}.</p>
             ) : (
               <AccessButton
                 onClick={() =>
@@ -278,8 +323,14 @@ export function InvestmentPanel({ asset }: { asset: MarketAsset }) {
               rows={[
                 ['Gross raised', `${display(f.gross)} USDC`],
                 ['Protocol fee', `${display(f.fee, 6)} USDC`],
-                ['Reserved for liquidity', `${display(f.poolUsdc)} USDC`],
-                ['Net creator proceeds', `${display(f.net)} USDC`],
+                [
+                  f.proceedsClaimed ? 'USDC committed to pool' : 'Liquidity funding estimate',
+                  `${display(f.poolUsdc)} USDC`,
+                ],
+                [
+                  f.proceedsClaimed ? 'Creator proceeds transferred' : 'Creator proceeds estimate',
+                  `${display(f.net)} USDC`,
+                ],
               ]}
             />
             {f.status === 'migration' && (
@@ -289,6 +340,7 @@ export function InvestmentPanel({ asset }: { asset: MarketAsset }) {
                 </div>
                 {own && state.now < f.start ? (
                   <AccessButton
+                    disabled={!f.migrationReady}
                     onClick={() =>
                       transact(
                         'Activate financing',
@@ -331,19 +383,6 @@ export function InvestmentPanel({ asset }: { asset: MarketAsset }) {
                 <Link className="mp-button full" href="/portfolio">
                   View holdings <ArrowRight size={17} />
                 </Link>
-                {own && !f.proceedsClaimed && f.net > 0 && (
-                  <AccessButton
-                    onClick={() =>
-                      transact(
-                        'Collect launch proceeds',
-                        `Transfer ${display(f.net)} USDC in sale proceeds to your wallet.`,
-                        { type: 'proceeds', assetId: asset.id },
-                      )
-                    }
-                  >
-                    Collect {display(f.net)} USDC proceeds
-                  </AccessButton>
-                )}
               </>
             )}
           </>
@@ -352,14 +391,22 @@ export function InvestmentPanel({ asset }: { asset: MarketAsset }) {
       {f.status !== 'fundraising' && unclaimed.length > 0 && (
         <section className="mp-box">
           <h3>{f.status === 'failed' ? 'Claim your refund' : 'Claim your allocation'}</h3>
-          <Rows
-            rows={[
-              ['Original budget', `${display(myBudget)} USDC`],
-              ['Token allocation', `${display(tokens)} ${f.symbol}`],
-              ['Unspent budget', `${display(refund)} USDC`],
-            ]}
-          />
+          {f.allocationPending ? (
+            <p className="mp-muted">
+              Exit your bids to calculate allocations and return unspent budgets. A second
+              transaction claims purchased tokens after the claim block.
+            </p>
+          ) : (
+            <Rows
+              rows={[
+                ['Original budget', `${display(myBudget)} USDC`],
+                ['Token allocation', `${display(tokens)} ${f.symbol}`],
+                ['Unspent budget', `${display(refund)} USDC`],
+              ]}
+            />
+          )}
           <AccessButton
+            disabled={!f.saleEnded}
             onClick={() =>
               transact(
                 f.status === 'failed' ? 'Claim sale refund' : 'Claim sale allocation',
@@ -367,6 +414,7 @@ export function InvestmentPanel({ asset }: { asset: MarketAsset }) {
                   ? `Return ${display(refund)} USDC to your wallet.`
                   : `Receive ${display(tokens)} ${f.symbol} and ${display(refund)} USDC in unused funds.`,
                 { type: 'sale-claim', assetId: asset.id },
+                undefined,
               )
             }
           >

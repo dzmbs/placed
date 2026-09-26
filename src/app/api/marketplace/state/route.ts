@@ -9,6 +9,7 @@ import { readLaunch } from '@/lib/marketplace/server/launch';
 import { walletAddress } from '@/lib/marketplace/server/auth';
 import { failure, RequestError } from '@/lib/marketplace/server/http';
 import type { MarketSnapshot } from '@/lib/marketplace/snapshot';
+import { readEventRange } from '@/lib/marketplace/event-range';
 
 export const runtime = 'nodejs';
 let indexed = deploymentBlock - 1n;
@@ -18,12 +19,14 @@ async function indexEvents(to: bigint) {
   if (updating) await updating;
   if (to <= indexed) return;
   updating = (async () => {
-    const logs = await publicClient.getContractEvents({
-      address: contracts.auctionHouse,
-      abi: auctionHouseAbi,
-      fromBlock: indexed + 1n,
-      toBlock: to,
-    });
+    const logs = await readEventRange(indexed + 1n, to, (fromBlock, toBlock) =>
+      publicClient.getContractEvents({
+        address: contracts.auctionHouse,
+        abi: auctionHouseAbi,
+        fromBlock,
+        toBlock,
+      }),
+    );
     const times = new Map<string, number>();
     for (const log of logs) {
       const key = String(log.blockNumber);
@@ -120,14 +123,16 @@ export async function GET(request: Request) {
       for (const asset of assets) {
         if (!asset.financing) continue;
         const token = asset.financing.token;
-        const redeemed = await publicClient.getContractEvents({
-          address: token,
-          abi: assetRevenueVaultAbi,
-          eventName: 'Redeemed',
-          args: { holder: wallet },
-          fromBlock: deploymentBlock,
-          toBlock: block.number,
-        });
+        const redeemed = await readEventRange(deploymentBlock, block.number, (fromBlock, toBlock) =>
+          publicClient.getContractEvents({
+            address: token,
+            abi: assetRevenueVaultAbi,
+            eventName: 'Redeemed',
+            args: { holder: wallet },
+            fromBlock,
+            toBlock,
+          }),
+        );
         if (redeemed.length)
           redemptions[asset.id] = String(
             redeemed.reduce((sum, event) => sum + (event.args.amount ?? 0n), 0n),

@@ -142,12 +142,17 @@ export async function verifyWorldRequest(wallet: Address, result: IDKitResult) {
     const linked = db
       .prepare('SELECT identity FROM participants WHERE wallet = ?')
       .get(wallet.toLowerCase()) as { identity: string } | undefined;
-    if (
-      (person && person.wallet !== wallet.toLowerCase()) ||
-      (linked && linked.identity !== identity)
-    )
+    if (person && person.wallet !== wallet.toLowerCase())
       throw new RequestError(
-        'This person or wallet is already linked to another participant.',
+        'This World ID is already linked to another wallet. Switch back to your verified wallet.' +
+          (config.environment === 'staging'
+            ? ' To test a separate sponsor, select a different identity in the World simulator.'
+            : ''),
+        409,
+      );
+    if (linked && linked.identity !== identity)
+      throw new RequestError(
+        'This wallet is already verified with a different World ID. Use its original World identity or connect another wallet.',
         409,
       );
     const consumed = db

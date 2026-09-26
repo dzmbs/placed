@@ -41,6 +41,8 @@ The user signs a short-lived wallet challenge. The backend then signs an RP requ
 
 Successful human verification requires a person to complete the widget. A signed RP request and rejection tests alone are not evidence of a completed World verification.
 
+For creator and sponsor testing in staging, use a different simulator identity for each wallet. Open the [identity picker](https://simulator.worldcoin.org/select-id), select another identity or choose **Add identity**, then start a fresh request in Placed. Reusing the creator's identity with a sponsor wallet correctly returns `409`; this is a participant conflict, not an invalid World proof. The app closes the failed widget and shows that explanation beside the wallet controls.
+
 ## ENSv2 parent
 
 `placed-demo.eth` is the registered testnet parent for this deployment. It is the namespace containing asset names such as `a1.placed-demo.eth` and slot names such as `s1.a1.placed-demo.eth`. Creators do not register a separate .eth name themselves.

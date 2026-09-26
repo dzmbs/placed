@@ -551,6 +551,16 @@ export function MarketProvider({
           {walletError && (
             <p className="mp-error" role="alert">
               {walletError}
+              {walletError.includes('World simulator') && (
+                <a
+                  className="mp-transaction-link"
+                  href="https://simulator.worldcoin.org/select-id"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Choose another test identity <ArrowUpRight size={14} />
+                </a>
+              )}
             </p>
           )}
           {!active && client && (

@@ -6,6 +6,7 @@ import type { Address } from 'viem';
 import type { WalletConnection } from './providers';
 import * as client from '@/lib/marketplace/client';
 import type { ParticipantAuthorization } from '@/lib/marketplace/domain';
+import { friendlyMarketError } from '@/lib/marketplace/progress';
 import styles from './marketplace.module.css';
 
 interface WalletState {
@@ -266,6 +267,7 @@ export function MarketplaceProvider({
         {headless ? children : <main className={styles.main}>{children}</main>}
         {world && (
           <IDKitRequestWidget
+            key={world.rp_context.nonce}
             {...world}
             preset={proofOfHuman({ signal: world.signal })}
             open={worldOpen}
@@ -284,8 +286,8 @@ export function MarketplaceProvider({
               }
             }}
             handleVerify={async (result) => {
-              const current = await authenticate();
               try {
+                const current = await authenticate();
                 authorization.current = await client.api<ParticipantAuthorization>(
                   '/world/verify',
                   {
@@ -301,9 +303,11 @@ export function MarketplaceProvider({
                   'World proof verified. Confirm the Sepolia wallet authorization transaction.',
                 );
               } catch (error) {
-                worldError.current =
-                  error instanceof Error ? error.message : 'World proof could not be verified.';
+                worldError.current = friendlyMarketError(error);
                 setNotice(worldError.current);
+                setWorldOpen(false);
+                verification.current?.reject(new Error(worldError.current));
+                verification.current = undefined;
                 throw error;
               }
             }}
@@ -323,8 +327,12 @@ export function MarketplaceProvider({
               }
             }}
             onError={(code) => {
-              worldError.current ||= `World verification failed (${code}). Publishing remains locked.`;
+              worldError.current ||=
+                code === 'user_rejected'
+                  ? 'You cancelled World verification. No protected action was completed.'
+                  : 'World verification could not be completed. Try again with the correct identity and connected wallet.';
               setNotice(worldError.current);
+              setWorldOpen(false);
               verification.current?.reject(new Error(worldError.current));
               verification.current = undefined;
             }}

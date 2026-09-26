@@ -1,4 +1,4 @@
-import { MarketplaceProvider } from '@/components/marketplace/context';
+import MarketplaceProviders from '@/components/marketplace/providers';
 export default function Layout({ children }: { children: React.ReactNode }) {
-  return <MarketplaceProvider>{children}</MarketplaceProvider>;
+  return <MarketplaceProviders>{children}</MarketplaceProviders>;
 }

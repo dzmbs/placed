@@ -4,7 +4,7 @@ Creators list assets. Brands book advertising slots. Investors can buy shares of
 
 Upload an outfit photo, generate a rotatable model, mark placements and preview a logo. Run funded USDC auctions with escrow and proof-photo settlement. Financing is optional: a separate **Raise capital** action creates one fixed-supply revenue token and vault per asset, launches it through Uniswap CCA and migrates liquidity to Uniswap v4.
 
-Built with Next.js, React Three Fiber, Solidity, World ID and ENSv2. The marketplace uses Ethereum Sepolia and a clearly labeled demo USDC token.
+Built with Next.js, React Three Fiber, Solidity, Privy, World ID and ENSv2. The marketplace uses Ethereum Sepolia and a clearly labeled demo USDC token.
 
 ## Run locally
 
@@ -21,6 +21,8 @@ npm run dev
 Open the [marketplace](http://127.0.0.1:3000/marketplace) or [3D studio](http://127.0.0.1:3000). Models and Blender sources are included. The studio and prepared examples work without credentials.
 
 For image-to-3D, set `TRIPO_API_KEY` and `GENERATION_ENABLED=true`. The standalone studio also supports Meshy. Generation uses provider credits. `OPENAI_API_KEY` enables proof-photo matching.
+
+Set `NEXT_PUBLIC_PRIVY_APP_ID` and allow your app origin in the Privy dashboard for wallet connection. A Privy app secret is not used by the browser.
 
 Publishing and advertising bids require backend-verified World Proof of Human and a connected Sepolia wallet. Configure World credentials and contract signers using [the integration guide](docs/integrations.md). Use **Get demo USDC** after connecting. Investors do not need World verification.
 

@@ -378,6 +378,22 @@ export function InvestmentPanel({ asset }: { asset: Asset }) {
                 </p>
               </>
             )}
+            {saleEnded &&
+              checkpointed &&
+              !sale.graduated &&
+              !sale.swept &&
+              BigInt(sale.block) >= BigInt(series.migrationBlock) && (
+                <button
+                  disabled={market.busy || !market.wallet}
+                  onClick={() =>
+                    void market.run('Recover failed launch liquidity reserves to creator', () =>
+                      client.recoverFailedLaunch(market.wallet!, series.auction),
+                    )
+                  }
+                >
+                  Return unused liquidity reserves to creator
+                </button>
+              )}
             {sale.bids.map((bid) => (
               <div key={bid.id}>
                 <h3>Your bid #{bid.id}</h3>

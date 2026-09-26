@@ -11,6 +11,7 @@ import {IVerifiableFactory, IPermissionedResolver} from "../src/interfaces/IENSv
 import {PoolKey, ILBPStrategy, ICCAFactory, IV4PositionManager} from "../src/interfaces/IUniswapLaunch.sol";
 
 interface ITestCCA {
+    function sweepUnsoldTokens() external;
     function submitBid(uint256 maxPrice, uint128 budget, address owner, bytes calldata data) external returns (uint256);
     function checkpoint() external;
     function clearingPrice() external view returns (uint256);
@@ -168,6 +169,20 @@ contract SepoliaIntegrationTest is Test {
         assertEq(currency.balanceOf(investor) - beforeBalance, 10e6);
         vm.expectRevert(AssetLaunchCoordinator.InvalidState.selector);
         launches.migrateAndActivate(asset);
+        assertFalse(vault.activated());
+    }
+
+    function testUnsuccessfulLaunchReturnsTokenReservesToCreator() public {
+        (AssetRevenueVault vault, ITestCCA auction, AssetLaunchCoordinator.LaunchTerms memory sale) = _launch(1000e6);
+        vm.roll(sale.migrationBlock);
+        auction.checkpoint();
+        ILBPStrategy(STRATEGY).migrate(address(auction));
+        assertEq(vault.balanceOf(creator), 400 ether);
+        vm.prank(creator);
+        auction.sweepUnsoldTokens();
+        assertEq(vault.balanceOf(creator), 1000 ether);
+        vm.expectRevert(AssetLaunchCoordinator.InvalidState.selector);
+        launches.activateMigratedLaunch(asset, 1);
         assertFalse(vault.activated());
     }
 

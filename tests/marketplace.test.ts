@@ -192,6 +192,53 @@ test('World authorization rejects wallet, action, nonce, environment and credent
     ],
   };
   assert.equal(validateWorldResult(valid, expected, 1000), '10');
+  assert.equal(
+    validateWorldResult(
+      { ...valid, responses: [{ ...valid.responses[0], expires_at_min: 0 }] } as IDKitResult,
+      expected,
+      1000,
+    ),
+    '10',
+  );
+  const legacy: IDKitResult = {
+    protocol_version: '3.0',
+    nonce: expected.nonce,
+    action: expected.action,
+    environment: expected.environment,
+    responses: [
+      {
+        identifier: 'orb',
+        signal_hash: worldSignalHash(expected.signal),
+        nullifier: '0x0a',
+        merkle_root: '0x01',
+        proof: `0x${'00'.repeat(256)}`,
+      },
+    ],
+  };
+  assert.equal(validateWorldResult(legacy, { ...expected, allowLegacy: true }, 1000), '10');
+  assert.throws(() => validateWorldResult(legacy, expected, 1000));
+  assert.throws(() =>
+    validateWorldResult(
+      { ...legacy, responses: [{ ...legacy.responses[0], identifier: 'device' }] },
+      { ...expected, allowLegacy: true },
+      1000,
+    ),
+  );
+  assert.throws(() =>
+    validateWorldResult(
+      { ...legacy, responses: [{ ...legacy.responses[0], identifier: 'document' }] },
+      { ...expected, allowLegacy: true },
+      1000,
+    ),
+  );
+  assert.throws(() =>
+    validateWorldResult(
+      legacy,
+      { ...expected, allowLegacy: true, signal: 'different-wallet' },
+      1000,
+    ),
+  );
+
   for (const change of [
     { nonce: 'other' },
     { action: 'other' },

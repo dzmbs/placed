@@ -21,8 +21,10 @@
     "verify:marketplace": "node --import tsx scripts/verify_marketplace_api.ts"
   },
   "dependencies": {
+    "@privy-io/react-auth": "3.45.0",
     "@react-three/drei": "^10.7.9",
     "@react-three/fiber": "^9.8.1",
+    "@stripe/stripe-js": "^9.17.0",
     "@worldcoin/idkit": "4.3.0",
     "@worldcoin/idkit-core": "4.3.0",
     "lucide-react": "^1.48.0",
@@ -44,5 +46,8 @@
   },
   "engines": {
     "node": ">=22.19.0"
+  },
+  "overrides": {
+    "ws@>=8 <9": "8.21.0"
   }
 }

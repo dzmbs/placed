@@ -18,7 +18,7 @@ Public sale/trade evidence is not recorded yet. The shared contracts and ENS par
 
 The trust moment is creator publishing and the first funded advertising bid. Proof of Human is sufficient for participant uniqueness; we do not collect legal names or claim that it proves ownership of the asset. Investing and trading remain permissionless.
 
-Implemented: IDKit 4.3.0 v4 requests, wallet-bound server-signed RP context, official server verification, private uniqueness mapping, onchain authorization and rejected/cancelled paths. Local HTTP checks confirmed request signing and rejection. Automated policy checks reject substituted wallets, actions, nonces, environments and credentials.
+Implemented: IDKit 4.3.0 v4 requests, wallet-bound server-signed RP context, official server verification, private uniqueness mapping, onchain authorization and rejected/cancelled paths. Local HTTP checks confirmed request signing and rejection. Automated policy checks reject substituted wallets, actions, nonces, environments and credentials. Simulator testing exposed two integration errors: disabling Proof of Human's documented Orb fallback and treating `expires_at_min` as the credential expiry. Both are corrected, with v3 Orb and v4 human payloads forwarded unchanged to the official verifier. Device and document proofs remain rejected.
 
 Time to first successful human proof is not measured yet. Do not count an RP signature or a mocked cryptographic response as a success. Finish this debrief after a person completes the widget in the configured environment.
 

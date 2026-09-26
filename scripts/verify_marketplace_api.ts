@@ -26,11 +26,16 @@ async function main() {
   const session = await response.json();
   assert.equal((await send('/auth/session', { id: challenge.id, signature })).status, 401);
   assert.equal((await send('/world/request', {})).status, 401);
+  const verificationStatus = await fetch(`${origin}/api/marketplace/world/authorization`, {
+    headers: { authorization: `Bearer ${session.token}` },
+  });
+  assert.equal(verificationStatus.status, 200);
+  assert.deepEqual(await verificationStatus.json(), { verified: false });
   assert.equal((await send('/world/authorization', {}, session.token)).status, 403);
   const worldResponse = await send('/world/request', {}, session.token);
   assert.equal(worldResponse.status, 200);
   const world = await worldResponse.json();
-  assert.equal(world.allow_legacy_proofs, false);
+  assert.equal(world.allow_legacy_proofs, true);
   assert.equal(typeof world.rp_context.signature, 'string');
   const rejected = await send(
     '/world/verify',

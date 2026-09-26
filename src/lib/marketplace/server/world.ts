@@ -63,7 +63,7 @@ export function createWorldRequest(wallet: Address) {
     action: config.action,
     environment: config.environment,
     signal,
-    allow_legacy_proofs: false as const,
+    allow_legacy_proofs: true as const,
     rp_context: {
       rp_id: config.rpId,
       nonce: signature.nonce,
@@ -94,12 +94,18 @@ export async function verifyWorldRequest(wallet: Address, result: IDKitResult) {
     throw new RequestError('World request was not found or was already used.', 401);
   let nullifier: string;
   try {
-    nullifier = validateWorldResult(result, expected, Math.floor(Date.now() / 1000));
-  } catch {
-    throw new RequestError(
-      'World proof does not match the requested credential, wallet, action or environment.',
-      401,
+    nullifier = validateWorldResult(
+      result,
+      { ...expected, allowLegacy: true },
+      Math.floor(Date.now() / 1000),
     );
+  } catch (error) {
+    const message =
+      error instanceof Error && error.message.startsWith('World')
+        ? error.message
+        : 'World returned a malformed proof.';
+    console.warn('[World verification]', message);
+    throw new RequestError(message, 401);
   }
   const verification = await fetch(`https://developer.world.org/api/v4/verify/${config.rpId}`, {
     method: 'POST',
@@ -107,13 +113,23 @@ export async function verifyWorldRequest(wallet: Address, result: IDKitResult) {
     body: JSON.stringify(result),
     signal: AbortSignal.timeout(20000),
   });
-  if (!verification.ok)
+  const verified = (await verification.json()) as {
+    environment?: string;
+    success?: boolean;
+    code?: string;
+  };
+  if (!verification.ok) {
+    const code =
+      typeof verified.code === 'string' && /^[a-z_]{1,60}$/.test(verified.code)
+        ? verified.code
+        : 'verification_failed';
+    console.warn('[World verifier]', code);
     throw new RequestError(
-      'World rejected this proof. The protected action remains unavailable.',
+      `World rejected this proof (${code}). Check the app action and environment.`,
       401,
     );
-  const verified = (await verification.json()) as { environment?: string; success?: boolean };
-  if (verified.environment !== expected.environment || verified.success === false)
+  }
+  if (verified.environment !== expected.environment || verified.success !== true)
     throw new RequestError(
       'World verification returned an unexpected environment or rejected result.',
       401,
@@ -159,12 +175,15 @@ export async function verifyWorldRequest(wallet: Address, result: IDKitResult) {
   }
   return participantAuthorization(wallet);
 }
+export function hasWorldVerification(wallet: Address) {
+  return Boolean(
+    database().prepare('SELECT 1 FROM participants WHERE wallet = ?').get(wallet.toLowerCase()),
+  );
+}
 export async function participantAuthorization(wallet: Address) {
   requireDeployment();
-  const participant = database()
-    .prepare('SELECT wallet FROM participants WHERE wallet = ?')
-    .get(wallet.toLowerCase());
-  if (!participant) throw new RequestError('Complete Proof of Human verification first.', 403);
+  if (!hasWorldVerification(wallet))
+    throw new RequestError('Complete Proof of Human verification first.', 403);
   const signer = signingAccount('PRIVATE_KEY');
   const [expectedSigner, nonce] = await Promise.all([
     publicClient.readContract({

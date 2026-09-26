@@ -84,7 +84,7 @@ export async function readLaunch(assetId: string, wallet?: Address) {
     const sweep = sweeps[0];
     if (sweep?.transactionHash && sweep.args.amount !== undefined) {
       const netReceived = sweep.args.amount;
-      fee = gross - netReceived;
+      fee = Boolean(values[7]) ? gross - netReceived : 0n;
       const receipt = await publicClient.getTransactionReceipt({ hash: sweep.transactionHash });
       const abi = parseAbi(['event CurrencySwept(address indexed recipient,uint256 amount)']);
       let paid = 0n;
@@ -102,7 +102,10 @@ export async function readLaunch(assetId: string, wallet?: Address) {
       liquidityFunding = String(netReceived - paid);
     }
   }
-  const net = gross - fee;
+  const net =
+    block >= configuration.endBlock && BigInt(values[8]) >= configuration.endBlock && !values[7]
+      ? 0n
+      : gross - fee;
   const liquidity = (net * BigInt(asset.financing.liquidityCurrencyMps)) / 10_000_000n;
   const ownerLogs =
     wallet && block >= configuration.startBlock

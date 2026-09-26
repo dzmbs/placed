@@ -449,6 +449,15 @@ export default function CreateAsset() {
               Publishing requires Proof of Human. No token is created. You can run advertising
               auctions immediately and choose financing later.
             </p>
+            {!market.balances?.authorized && (
+              <p className={styles.muted} role="status">
+                {!market.wallet
+                  ? 'Connect your wallet with Privy to publish.'
+                  : market.worldVerified
+                    ? 'Your World proof passed. Use Finish wallet authorization above and confirm the Sepolia transaction.'
+                    : 'Complete Verify with World above. Then confirm the wallet transaction to enable publishing.'}
+              </p>
+            )}
             <button
               disabled={
                 market.busy || !market.balances?.authorized || !draft.spots.length || !title.trim()

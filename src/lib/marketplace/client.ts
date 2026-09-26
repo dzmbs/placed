@@ -28,9 +28,9 @@ export const browserPublicClient = createPublicClient({
   chain: marketplaceChain,
   transport: http('https://ethereum-sepolia-rpc.publicnode.com'),
 });
-let selectedProvider: EIP1193Provider | undefined;
-export function selectWalletProvider(value: EIP1193Provider) {
-  selectedProvider = value;
+let walletProvider: (() => Promise<EIP1193Provider>) | undefined;
+export function selectWalletProvider(value?: () => Promise<EIP1193Provider>) {
+  walletProvider = value;
 }
 export interface WalletSession {
   wallet: Address;
@@ -50,17 +50,9 @@ export async function api<T>(
   if (!response.ok) throw new Error(body.error || 'The request failed.');
   return body as T;
 }
-export function provider(): EIP1193Provider {
-  if (selectedProvider) return selectedProvider;
-  const injected = (window as Window & { ethereum?: EIP1193Provider }).ethereum;
-  if (!injected) throw new Error('Open this page with a browser wallet installed.');
-  return injected;
-}
-export async function connectWallet(): Promise<Address> {
-  const wallet = createWalletClient({ chain: marketplaceChain, transport: custom(provider()) });
-  const [account] = await wallet.requestAddresses();
-  await wallet.switchChain({ id: marketplaceChain.id });
-  return account;
+async function provider(): Promise<EIP1193Provider> {
+  if (!walletProvider) throw new Error('Connect your wallet with Privy first.');
+  return walletProvider();
 }
 export async function signIn(wallet: Address): Promise<WalletSession> {
   const challenge = await api<{ id: string; message: string }>('/auth/challenge', {
@@ -71,7 +63,7 @@ export async function signIn(wallet: Address): Promise<WalletSession> {
   const client = createWalletClient({
     account: wallet,
     chain: marketplaceChain,
-    transport: custom(provider()),
+    transport: custom(await provider()),
   });
   const signature = await client.signMessage({ message: challenge.message });
   return api<WalletSession>('/auth/session', {
@@ -91,7 +83,7 @@ async function transaction(
   const client = createWalletClient({
     account: wallet,
     chain: marketplaceChain,
-    transport: custom(provider()),
+    transport: custom(await provider()),
   });
   const [current] = await client.getAddresses();
   if (current?.toLowerCase() !== wallet.toLowerCase())
@@ -268,6 +260,14 @@ export const checkpointCCA = (wallet: Address, auction: Address) =>
   transaction(wallet, auction, ccaAbi, 'checkpoint');
 export const sweepUnsoldTokens = (wallet: Address, auction: Address) =>
   transaction(wallet, auction, ccaAbi, 'sweepUnsoldTokens');
+export const recoverFailedLaunch = (wallet: Address, auction: Address) =>
+  transaction(
+    wallet,
+    contracts.lbpStrategy,
+    parseAbi(['function migrate(address initializer)']),
+    'migrate',
+    [auction],
+  );
 export const exitCCABid = (wallet: Address, auction: Address, id: string) =>
   transaction(wallet, auction, ccaAbi, 'exitBid', [BigInt(id)]);
 export const exitPartialCCABid = (
@@ -285,7 +285,7 @@ export async function executeTrade(wallet: Address, quote: TradeQuote) {
   const client = createWalletClient({
     account: wallet,
     chain: marketplaceChain,
-    transport: custom(provider()),
+    transport: custom(await provider()),
   });
   const hash = await client.sendTransaction({ to: universalRouter, data: encodeTrade(quote) });
   const receipt = await browserPublicClient.waitForTransactionReceipt({ hash });

@@ -6,13 +6,25 @@ import { validId } from '../ids';
 import type { GenerationJob, SavedModel } from '../types';
 
 const root = path.join(process.cwd(), 'data');
+// The studio writes files and spends generation credits, so it only answers
+// localhost and the deployments listed in APP_ORIGIN (the hosted frontend
+// proxies /api here, so its Origin differs from this server's Host).
 export function assertLocalRequest(request: Request) {
   const requestUrl = new URL(request.url);
   const host = request.headers.get('host') || requestUrl.host;
-  if (!['localhost', '127.0.0.1', '[::1]'].includes(new URL(`http://${host}`).hostname))
+  const allowed = (process.env.APP_ORIGIN || '')
+    .split(',')
+    .filter((value) => value.trim())
+    .map((value) => new URL(value.trim()));
+  const local = ['localhost', '127.0.0.1', '[::1]'].includes(new URL(`http://${host}`).hostname);
+  if (!local && !allowed.some((url) => url.host === host))
     throw new Error('This studio accepts local requests only.');
   const origin = request.headers.get('origin');
-  if (origin && (new URL(origin).host !== host || new URL(origin).protocol !== requestUrl.protocol))
+  if (
+    origin &&
+    !(new URL(origin).host === host && new URL(origin).protocol === requestUrl.protocol) &&
+    !allowed.some((url) => url.origin === new URL(origin).origin)
+  )
     throw new Error('Cross-origin requests are not allowed.');
   if (request.headers.get('sec-fetch-site') === 'cross-site')
     throw new Error('Cross-site requests are not allowed.');

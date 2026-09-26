@@ -13,9 +13,11 @@ import { MarketNav } from './market-ui';
 import BrandMark from './brand-mark';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  ArrowDown,
   ArrowDownToLine,
   ArrowLeft,
   ArrowRight,
+  ArrowUp,
   ArrowUpRight,
   Backpack,
   Bike,
@@ -33,6 +35,8 @@ import {
   ImagePlus,
   Layers3,
   LoaderCircle,
+  Lock,
+  LockOpen,
   Luggage,
   Maximize2,
   Minimize2,
@@ -57,6 +61,7 @@ import {
   type CanvasDrafts,
 } from '@/lib/canvas-drafts';
 import { validId } from '@/lib/ids';
+import { nudge, sizeToSlider, sliderToSize, straighten, twist } from '@/lib/placement';
 import { HUMAN_PRESETS, humanWardrobe, type AvailableHuman } from '@/lib/humans';
 import HumanPicker from './human-picker';
 import './studio-immersive.css';
@@ -591,6 +596,7 @@ export default function Studio() {
   const [mode, setMode] = useState<'edit' | 'preview'>('edit');
   const [modal, setModal] = useState<Modal>(null);
   const [placing, setPlacing] = useState<'add' | 'move' | null>(null);
+  const [lockRatio, setLockRatio] = useState(true);
   const [autoRotate, setAutoRotate] = useState(false);
   const [showSpots, setShowSpots] = useState(true);
   const [expanded, setExpanded] = useState(false);
@@ -811,6 +817,22 @@ export default function Studio() {
         ? 'Placement moved to the new surface.'
         : 'Placement added. Give it a name and starting price.',
     );
+  }
+  function resize(axis: 'width' | 'height', value: number) {
+    if (!selected) return;
+    if (!lockRatio) return patchSpot({ [axis]: value });
+    const ratio = selected.height / selected.width;
+    patchSpot(
+      axis === 'width'
+        ? { width: value, height: Number((value * ratio).toFixed(3)) }
+        : { height: value, width: Number((value / ratio).toFixed(3)) },
+    );
+  }
+  function move(right: number, up: number) {
+    if (!selected) return;
+    // Step with the ad's size so small logos move finely and big panels quickly.
+    const step = Math.max(0.005, Math.min(selected.width, selected.height) * 0.1);
+    patchSpot({ position: nudge(selected.position, selected.rotation, right * step, up * step) });
   }
   function deleteSpot() {
     setDraft((d) => ({ ...d, spots: d.spots.filter((s) => s.id !== selectedId) }));
@@ -1337,35 +1359,71 @@ export default function Studio() {
                 </label>
                 {mode === 'edit' && (
                   <div className="spot-controls">
-                    <div className="dimension-control">
-                      <div className="range-row">
-                        <label htmlFor="spot-width">Width</label>
-                        <span>{selected.width.toFixed(2)} ×</span>
+                    {(['width', 'height'] as const).map((axis) => (
+                      <div className="dimension-control" key={axis}>
+                        <div className="range-row">
+                          <label htmlFor={`spot-${axis}`}>
+                            {axis === 'width' ? 'Width' : 'Height'}
+                          </label>
+                          <span>{selected[axis].toFixed(2)} ×</span>
+                        </div>
+                        <input
+                          id={`spot-${axis}`}
+                          type="range"
+                          min="0"
+                          max="1"
+                          step="0.002"
+                          value={sizeToSlider(selected[axis])}
+                          onChange={(e) => resize(axis, sliderToSize(Number(e.target.value)))}
+                        />
                       </div>
-                      <input
-                        id="spot-width"
-                        type="range"
-                        min="0.15"
-                        max="5"
-                        step="0.01"
-                        value={selected.width}
-                        onChange={(e) => patchSpot({ width: Number(e.target.value) })}
-                      />
+                    ))}
+                    <div className="placement-tools">
+                      <button
+                        className={lockRatio ? 'active' : ''}
+                        aria-pressed={lockRatio}
+                        onClick={() => setLockRatio(!lockRatio)}
+                        title={lockRatio ? 'Aspect ratio locked' : 'Aspect ratio unlocked'}
+                      >
+                        {lockRatio ? <Lock size={14} /> : <LockOpen size={14} />}
+                        Ratio
+                      </button>
+                      <span className="placement-tools-divider" />
+                      <button
+                        aria-label="Rotate left 15 degrees"
+                        title="Rotate left 15°"
+                        onClick={() => patchSpot({ rotation: twist(selected.rotation, Math.PI / 12) })}
+                      >
+                        <RotateCcw size={14} />
+                      </button>
+                      <button
+                        aria-label="Rotate right 15 degrees"
+                        title="Rotate right 15°"
+                        onClick={() => patchSpot({ rotation: twist(selected.rotation, -Math.PI / 12) })}
+                      >
+                        <RotateCw size={14} />
+                      </button>
+                      <button
+                        title="Make the ad level again"
+                        onClick={() => patchSpot({ rotation: straighten(selected.rotation) })}
+                      >
+                        Straighten
+                      </button>
                     </div>
-                    <div className="dimension-control">
-                      <div className="range-row">
-                        <label htmlFor="spot-height">Height</label>
-                        <span>{selected.height.toFixed(2)} ×</span>
-                      </div>
-                      <input
-                        id="spot-height"
-                        type="range"
-                        min="0.12"
-                        max="5"
-                        step="0.01"
-                        value={selected.height}
-                        onChange={(e) => patchSpot({ height: Number(e.target.value) })}
-                      />
+                    <div className="placement-nudge" aria-label="Nudge placement">
+                      <span>Nudge</span>
+                      <button aria-label="Nudge left" onClick={() => move(-1, 0)}>
+                        <ArrowLeft size={14} />
+                      </button>
+                      <button aria-label="Nudge up" onClick={() => move(0, 1)}>
+                        <ArrowUp size={14} />
+                      </button>
+                      <button aria-label="Nudge down" onClick={() => move(0, -1)}>
+                        <ArrowDown size={14} />
+                      </button>
+                      <button aria-label="Nudge right" onClick={() => move(1, 0)}>
+                        <ArrowRight size={14} />
+                      </button>
                     </div>
                     <button
                       className={`move-button ${placing === 'move' ? 'active' : ''}`}

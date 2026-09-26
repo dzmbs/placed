@@ -1118,3 +1118,49 @@ html:has(.studio-app.studio-fullscreen) {
     height: 78svh;
   }
 }
+
+/* Placement fine-tuning: ratio lock, rotation and nudge rows. */
+.studio-app .placement-tools,
+.studio-app .placement-nudge {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.studio-app .placement-tools > button,
+.studio-app .placement-nudge > button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-width: 34px;
+  min-height: 32px;
+  padding: 0 10px;
+  font-size: 12px;
+  color: #c8dfa9;
+  background: #0d1912a6;
+  border: 1px solid #b5cfa338;
+  border-radius: 7px;
+}
+.studio-app .placement-tools > button:hover,
+.studio-app .placement-nudge > button:hover {
+  border-color: #819d55;
+  color: #e1edcf;
+}
+.studio-app .placement-tools > button.active {
+  background: #31462a;
+  border-color: #819d55;
+  color: #d7f76a;
+}
+.studio-app .placement-tools-divider {
+  width: 1px;
+  height: 20px;
+  margin: 0 2px;
+  background: #b5cfa338;
+}
+.studio-app .placement-nudge > span {
+  margin-right: auto;
+  font-size: 12px;
+  color: var(--glass-muted);
+}

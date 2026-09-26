@@ -12,6 +12,7 @@ import {
 } from '@react-three/drei';
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 import { DecalGeometry } from 'three/addons/geometries/DecalGeometry.js';
+import { uprightRotation } from '@/lib/placement';
 import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
 import * as THREE from 'three';
 import AssetModel from './models';
@@ -317,15 +318,27 @@ function Scene(props: ViewerProps & { onLoaded: () => void }) {
     event.stopPropagation();
     root.current.updateWorldMatrix(true, true);
     const position = root.current.worldToLocal(event.point.clone());
-    const normal = event.face.normal
-      .clone()
+    // Average the clicked triangle's vertex normals: scanned and generated
+    // meshes have noisy flat faces, so the face normal alone tilts the ad.
+    const face = event.face;
+    const normals = event.object.geometry.getAttribute('normal');
+    const local = normals
+      ? new THREE.Vector3()
+          .fromBufferAttribute(normals, face.a)
+          .add(new THREE.Vector3().fromBufferAttribute(normals, face.b))
+          .add(new THREE.Vector3().fromBufferAttribute(normals, face.c))
+      : face.normal.clone();
+    if (local.lengthSq() < 1e-8 || local.dot(face.normal) <= 0) local.copy(face.normal);
+    const normal = local
+      .normalize()
       .transformDirection(event.object.matrixWorld)
       .transformDirection(root.current.matrixWorld.clone().invert());
-    const euler = new THREE.Euler().setFromQuaternion(
-      new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), normal),
-    );
     if (!event.object.name) event.object.name = `surface-${event.object.id}`;
-    props.onPlace(position.toArray() as Vec3, [euler.x, euler.y, euler.z], event.object.name);
+    props.onPlace(
+      position.toArray() as Vec3,
+      uprightRotation(normal.toArray() as Vec3),
+      event.object.name,
+    );
   }
   return (
     <>

@@ -1,5 +1,5 @@
 import 'server-only';
-import { createPublicClient, http, type Hex } from 'viem';
+import { createPublicClient, fallback, http, type Hex } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import { marketplaceChain, marketplaceReady } from '../config';
 import { RequestError } from './http';
@@ -10,10 +10,22 @@ import { encodeIndexValue } from '../event-index';
 const rpcClient = createPublicClient({
   chain: marketplaceChain,
   batch: { multicall: { wait: 20 } },
-  transport: http(process.env.SEPOLIA_RPC_URL || 'https://ethereum-sepolia-rpc.publicnode.com', {
-    timeout: 20000,
-  }),
+  transport: rpcTransport(),
 });
+// Free RPC plans rate-limit (429) under several testers polling at once, so
+// fall through to public Sepolia endpoints instead of failing every request.
+function rpcTransport() {
+  const urls = [
+    process.env.SEPOLIA_RPC_URL,
+    'https://ethereum-sepolia-rpc.publicnode.com',
+    'https://sepolia.drpc.org',
+    'https://1rpc.io/sepolia',
+  ].filter((url, index, all): url is string => Boolean(url) && all.indexOf(url) === index);
+  return fallback(
+    urls.map((url) => http(url, { timeout: 20000, retryCount: 0 })),
+    { retryCount: 1 },
+  );
+}
 const scope = new AsyncLocalStorage<{ number: bigint; hash?: string }>();
 const reads = new ReadCache(2048);
 // Pin related contract reads to one block and reuse identical reads across

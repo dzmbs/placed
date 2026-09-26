@@ -33,16 +33,27 @@ async function main() {
   assert.deepEqual(await verificationStatus.json(), { verified: false });
   assert.equal((await send('/world/authorization', {}, session.token)).status, 403);
   const worldResponse = await send('/world/request', {}, session.token);
-  assert.equal(worldResponse.status, 200);
-  const world = await worldResponse.json();
-  assert.equal(world.allow_legacy_proofs, true);
-  assert.equal(typeof world.rp_context.signature, 'string');
-  const rejected = await send(
-    '/world/verify',
-    { result: { nonce: world.rp_context.nonce, environment: 'wrong', responses: [] } },
-    session.token,
-  );
-  assert.equal(rejected.status, 401);
+  let worldCheck: string;
+  if (worldResponse.status === 503) {
+    assert.match(
+      (await worldResponse.json()).error,
+      /^World simulator testing needs a temporary staging token\./,
+    );
+    worldCheck = 'World missing-token configuration gate';
+  } else {
+    assert.equal(worldResponse.status, 200);
+    const world = await worldResponse.json();
+    assert.equal(world.allow_legacy_proofs, true);
+    assert.equal(typeof world.rp_context.signature, 'string');
+    assert.ok(!JSON.stringify(world).includes('staging_verification_token'));
+    const rejected = await send(
+      '/world/verify',
+      { result: { nonce: world.rp_context.nonce, environment: 'wrong', responses: [] } },
+      session.token,
+    );
+    assert.equal(rejected.status, 401);
+    worldCheck = 'signed World request/rejection';
+  }
   const logo = await readFile('public/examples/placed-logo.png');
   const media = await fetch(`${origin}/api/marketplace/media`, {
     method: 'POST',
@@ -68,7 +79,7 @@ async function main() {
   assert.equal(balances.status, 200);
   assert.equal((await balances.json()).authorized, false);
   console.log(
-    'Passed: wallet challenge/replay, authentication, signed World request/rejection, protected authorization, immutable media, metadata validation and Sepolia reads.',
+    `Passed: wallet challenge/replay, authentication, ${worldCheck}, protected authorization, immutable media, metadata validation and Sepolia reads.`,
   );
 }
 main().catch((error) => {

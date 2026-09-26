@@ -23,6 +23,18 @@ Use `http://127.0.0.1:3000` for this project's local server and add that exact o
 
 Set `NEXT_PUBLIC_WORLD_APP_ID`, `WORLD_RP_ID`, `WORLD_SIGNING_KEY`, `WORLD_ENVIRONMENT` and `WORLD_ACTION` from your World Developer Portal configuration. This implementation uses IDKit 4.3.0, v4 requests and Proof of Human, with the documented legacy Orb fallback enabled. The default environment is `staging`; use the environment configured for your app and testing credential.
 
+World ID 4.0 RPs belong to production apps and are mirrored to the staging registry for testing. An app's `is_staging` flag alone does not determine v4 simulator access. The official production verifier now requires a developer-opened 24-hour staging window and its server-only `x-staging-verification-token` header for simulator proofs. Without an open window and valid token, it returns `environment_not_allowed`. See [World's staging authorization implementation](https://github.com/worldcoin/developer-portal/blob/main/web/api/v4/verify/staging-access.ts).
+
+For simulator testing, save a team API key from World Developer Portal → your team → API keys as `WORLD_DEVELOPER_API_KEY` in `.env.local`, keep `WORLD_ENVIRONMENT=staging`, then run:
+
+```sh
+npm run world:staging
+```
+
+This command checks the configured app/RP, calls the official `set_world_id_staging_verification` MCP tool and privately saves `WORLD_STAGING_VERIFICATION_TOKEN` and its expiry to `.env.local`. It preserves the RP signing key. Restart the server and open a fresh verification request. Run the command again after the window expires; renewing replaces the previous token. The app forwards this token only on server-to-server staging verification calls. The team API key is used only by setup tooling.
+
+For real-device verification, configure a production action and set `WORLD_ENVIRONMENT=production`. Production calls do not send the staging token. Changing the request environment does not convert a simulator proof into a production proof.
+
 Create `WORLD_IDENTITY_SALT` as a random secret of at least 32 characters. It keeps the private uniqueness mapping separate from raw World nullifiers. Keep this value stable: changing it would invalidate the existing identity mapping.
 
 The user signs a short-lived wallet challenge. The backend then signs an RP request bound to that wallet, checks the returned nonce, signal, credential, action and environment, and verifies the proof with World's official verification endpoint. One person maps to one wallet in the application/action scope. Only a validated result can issue an onchain participant voucher. The official Proof of Human preset includes a legacy Orb fallback; both are checked by World's v4 verification endpoint. Device and document fallback proofs are rejected. `expires_at_min` is a proof's disclosed lower bound, not the credential's expiry time. Request expiry, wallet signal, action and environment remain enforced. After backend verification, the wallet must confirm the authorization transaction before publishing unlocks. Cancelling, rejecting or lacking the credential leaves publishing and bidding unavailable. Investing and trading stay permissionless.
@@ -70,4 +82,4 @@ Our Sepolia fork tests validate these revisions against the deployed contracts. 
 
 Local documentation and upstream repository clones live in ignored `reference/`. They are excluded from application formatting, type checking and output tracing. Dependencies needed by our contracts will be pinned separately in the contract workspace.
 
-The MVP does not use Privy or additional chains. Wallet connections use EIP-6963 discovery with an injected-provider fallback. No World agent flow or custom swap hook is required.
+The MVP uses Privy for wallet connections and Sepolia for transactions. No World agent flow or custom swap hook is required.

@@ -10,6 +10,7 @@ import { contracts, auctionDomain } from '../config';
 import { auctionHouseAbi } from '../abi/AuctionHouse';
 import { participantTypes } from '../math';
 import { validateWorldResult } from '../world-policy';
+import { requireWorldStagingToken, verifyWorldProof, WorldVerifierError } from '../world-verifier';
 
 export function worldConfiguration() {
   const appId = process.env.NEXT_PUBLIC_WORLD_APP_ID;
@@ -34,6 +35,12 @@ export function worldConfiguration() {
 }
 export function createWorldRequest(wallet: Address) {
   const config = worldConfiguration();
+  try {
+    requireWorldStagingToken(config.environment, process.env.WORLD_STAGING_VERIFICATION_TOKEN);
+  } catch (error) {
+    if (error instanceof WorldVerifierError) throw new RequestError(error.message, error.status);
+    throw error;
+  }
   const signature = signRequest({
     signingKeyHex: config.signingKey,
     action: config.action,
@@ -107,33 +114,20 @@ export async function verifyWorldRequest(wallet: Address, result: IDKitResult) {
     console.warn('[World verification]', message);
     throw new RequestError(message, 401);
   }
-  const verification = await fetch(`https://developer.world.org/api/v4/verify/${config.rpId}`, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify(result),
-    signal: AbortSignal.timeout(20000),
-  });
-  const verified = (await verification.json()) as {
-    environment?: string;
-    success?: boolean;
-    code?: string;
-  };
-  if (!verification.ok) {
-    const code =
-      typeof verified.code === 'string' && /^[a-z_]{1,60}$/.test(verified.code)
-        ? verified.code
-        : 'verification_failed';
-    console.warn('[World verifier]', code);
-    throw new RequestError(
-      `World rejected this proof (${code}). Check the app action and environment.`,
-      401,
+  try {
+    await verifyWorldProof(
+      result,
+      config.rpId,
+      expected.environment,
+      process.env.WORLD_STAGING_VERIFICATION_TOKEN,
     );
+  } catch (error) {
+    if (error instanceof WorldVerifierError) {
+      console.warn('[World verifier]', error.code);
+      throw new RequestError(error.message, error.status);
+    }
+    throw error;
   }
-  if (verified.environment !== expected.environment || verified.success !== true)
-    throw new RequestError(
-      'World verification returned an unexpected environment or rejected result.',
-      401,
-    );
   const salt = process.env.WORLD_IDENTITY_SALT;
   if (!salt || salt.length < 32)
     throw new RequestError('World identity storage is not configured.', 503);

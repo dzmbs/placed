@@ -8,6 +8,7 @@ import { useMarket, MarketDialog } from './market-provider';
 import { Badge, Empty, MarketUnavailable, MarketShell, PageTitle } from './market-ui';
 import { BiddingPanel, CampaignForm, ProofPanel } from './market-campaign';
 import { MediaInput } from './market-media';
+import { EnsIdentity } from './market-ens';
 import { FinanceForm, InvestmentPanel, RevenueTerms, TradingPanel } from './market-finance';
 import type { CameraCommand } from './viewer';
 const Viewer = dynamic(() => import('./viewer'), {
@@ -258,7 +259,7 @@ export default function MarketAssetPage({
               asset.draft.campaign.deliverables !== asset.description && (
                 <div className="mp-note">{asset.draft.campaign.deliverables}</div>
               )}
-            {asset.ens && <p className="mp-small mp-muted">{asset.ens}</p>}
+            <EnsIdentity asset={asset} campaigns={state.campaigns} people={state.people} />
           </section>
         </div>
       </div>

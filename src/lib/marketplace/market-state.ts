@@ -188,6 +188,14 @@ export function mapMarketState(snapshot: MarketSnapshot): MarketState {
       name: meta.title,
       description: meta.description,
       ens: asset.ensName,
+      metadataURI: asset.metadataURI,
+      slotNames: asset.slots.map((slot) => ({
+        id: slot.id,
+        ens: slot.ensName,
+        resolver: slot.resolver,
+        metadataURI: slot.metadataURI,
+        artworkURI: slot.publicArtwork,
+      })),
       financing,
       draft: {
         ...defaults,

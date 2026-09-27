@@ -2232,3 +2232,133 @@
 .mp-app:has(.mp-dashboard-summary) .mp-main {
   padding-top: 24px;
 }
+
+/* ENSv2 identity chip and hover card on the asset page. */
+.mp-ens {
+  position: relative;
+  margin-top: 18px;
+}
+.mp-ens-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 12px 7px 10px;
+  font:
+    500 13px ui-monospace,
+    monospace;
+  color: #3f5a2a;
+  background: #edf4dd;
+  border: 1px solid #d4e2bb;
+  border-radius: 999px;
+  cursor: pointer;
+}
+.mp-ens-chip:hover,
+.mp-ens-chip[aria-expanded='true'] {
+  background: #e2eecb;
+  border-color: #b9cf93;
+}
+.mp-ens-card {
+  position: absolute;
+  z-index: 20;
+  bottom: calc(100% + 10px);
+  left: 0;
+  width: min(420px, calc(100vw - 32px));
+  max-height: min(560px, 70vh);
+  overflow: auto;
+  padding: 18px;
+  background: #1d2c21;
+  color: #e7efd9;
+  border-radius: 14px;
+  box-shadow: 0 18px 50px #1d2c2140;
+}
+.mp-ens-card header {
+  display: grid;
+  gap: 3px;
+  padding-bottom: 12px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid #ffffff1f;
+}
+.mp-ens-card header > span {
+  font:
+    600 10px ui-monospace,
+    monospace;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #d7f76a;
+}
+.mp-ens-card header > strong {
+  font:
+    600 17px ui-monospace,
+    monospace;
+  word-break: break-all;
+}
+.mp-ens-card header > small {
+  font-size: 12px;
+  color: #a9b99a;
+}
+.mp-ens-card code {
+  font:
+    12px ui-monospace,
+    monospace;
+}
+.mp-ens-card a {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #d7f76a;
+}
+.mp-ens-record {
+  margin-bottom: 12px;
+}
+.mp-ens-slots {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 0 12px;
+  border-left: 1px dashed #ffffff33;
+  display: grid;
+  gap: 12px;
+}
+.mp-ens-slots > li {
+  display: grid;
+  gap: 5px;
+}
+.mp-ens-slot-name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 8px;
+}
+.mp-ens-slot-name > strong {
+  font:
+    600 13px ui-monospace,
+    monospace;
+  word-break: break-all;
+}
+.mp-ens-slot-name > span {
+  font-size: 12px;
+  color: #a9b99a;
+}
+.mp-ens-slot-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  font-size: 12px;
+}
+.mp-ens-slot-meta .mp-muted {
+  color: #8d9c80;
+}
+.mp-ens-role {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 12px;
+  color: #a9b99a;
+}
+.mp-ens-role.granted {
+  color: #d7f76a;
+}
+.mp-ens-footer {
+  margin-top: 14px;
+  font-size: 12px;
+}

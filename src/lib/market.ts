@@ -20,6 +20,15 @@ export type MarketAsset = {
   name: string;
   description: string;
   ens: string;
+  metadataURI?: string;
+  // ENSv2 names: one Permissioned Resolver per slot, in the asset's subregistry.
+  slotNames?: {
+    id: string;
+    ens: string;
+    resolver: string;
+    metadataURI: string;
+    artworkURI?: string;
+  }[];
   draft: Draft;
   financing?: Financing;
 };
